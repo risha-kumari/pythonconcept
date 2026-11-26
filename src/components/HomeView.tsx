@@ -1,24 +1,45 @@
-import React, { useMemo, useState } from 'react';
-import { ArrowRight, Play, CheckCircle2, AlertTriangle, Search, X } from 'lucide-react';
+import React, { useMemo, useRef, useState } from 'react';
+import {
+  ArrowRight,
+  Play,
+  CheckCircle2,
+  AlertTriangle,
+  Search,
+  X,
+  Globe,
+  ExternalLink,
+  Loader2,
+} from 'lucide-react';
 import { analyzePythonCode } from '../engine/pythonAnalyzer';
-import { DETECTOR_PRESETS, LEARNING_LESSONS, SYNTAX_ERROR_PRESETS } from '../data/curriculum';
+import {
+  buildSearchCandidates,
+  isSafeWebUrl,
+  normalizeSearchQuery,
+  searchAppItems,
+  type AppRoute,
+  type DetectorTab,
+  type SearchCategory,
+} from '../data/searchIndex';
+import { SearchEmptyState } from './SearchEmptyState';
 import { replaceNumericVarInCode } from './ExecutionGraphsPanel';
 
-export type AppRoute = 'home' | 'steps' | 'sandbox' | 'detector' | 'syntax' | 'learning' | 'practice';
+export type { AppRoute, DetectorTab };
 
 interface HomeViewProps {
   onNavigate: (route: AppRoute) => void;
   onLoadCodeInDetector: (code: string) => void;
   onOpenLesson: (lessonId: string) => void;
   onOpenSyntaxCode: (code: string) => void;
+  onOpenDetectorTab?: (tab: DetectorTab) => void;
+  onOpenCodeBuddy?: () => void;
+  onOpenLiveRoom?: () => void;
 }
 
-interface SearchResultItem {
-  id: string;
-  kind: string;
-  title: string;
-  subtitle: string;
-  action: () => void;
+interface WebGroundingResult {
+  query: string;
+  answer: string;
+  sources: { title: string; uri: string }[];
+  model?: string;
 }
 
 const QUICK_SAMPLE = `age = 18
@@ -33,124 +54,138 @@ export function HomeView({
   onLoadCodeInDetector,
   onOpenLesson,
   onOpenSyntaxCode,
+  onOpenDetectorTab,
+  onOpenCodeBuddy,
+  onOpenLiveRoom,
 }: HomeViewProps) {
   const [previewCode, setPreviewCode] = useState(QUICK_SAMPLE);
   const [query, setQuery] = useState('');
+  const [searchCategory, setSearchCategory] = useState<SearchCategory>('all');
+  const [webLoading, setWebLoading] = useState(false);
+  const [webError, setWebError] = useState<string | null>(null);
+  const [webResult, setWebResult] = useState<WebGroundingResult | null>(null);
+  const webAbortRef = useRef<AbortController | null>(null);
+
   const analysis = analyzePythonCode(previewCode);
 
   const previewVarMatch = previewCode.match(/^([A-Za-z_]\w*)\s*=\s*(-?\d+)/m);
   const previewVarName = previewVarMatch?.[1] ?? null;
   const previewVarValue = previewVarMatch ? Number(previewVarMatch[2]) : null;
 
-  const searchResults = useMemo<SearchResultItem[]>(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
+  const { trimmed: trimmedQuery, normalized: normalizedQuery } = normalizeSearchQuery(query);
 
-    const results: SearchResultItem[] = [];
+  const searchCandidates = useMemo(
+    () =>
+      buildSearchCandidates({
+        onNavigate,
+        onLoadCodeInDetector,
+        onOpenLesson,
+        onOpenSyntaxCode,
+        onOpenDetectorTab,
+        onOpenCodeBuddy,
+        onOpenLiveRoom,
+      }),
+    [
+      onNavigate,
+      onLoadCodeInDetector,
+      onOpenLesson,
+      onOpenSyntaxCode,
+      onOpenDetectorTab,
+      onOpenCodeBuddy,
+      onOpenLiveRoom,
+    ],
+  );
 
-    const tools: { title: string; subtitle: string; route: AppRoute; keywords: string }[] = [
-      {
-        title: 'Logic Detector & Step Simulator',
-        subtitle: 'Analyze Python code, step line-by-line, and animate condition flow',
-        route: 'detector',
-        keywords: 'logic detector simulator step condition flow boolean graphs',
-      },
-      {
-        title: 'Python Interactive Sandbox',
-        subtitle: 'Experiment freely with starter templates, console output, and variables',
-        route: 'sandbox',
-        keywords: 'sandbox playground console run test template',
-      },
-      {
-        title: 'Syntax Checker',
-        subtitle: 'Detect missing colons, indentation errors, brackets, and typos',
-        route: 'syntax',
-        keywords: 'syntax checker error colon indentation brackets quotes fix',
-      },
-      {
-        title: 'Steps to Use',
-        subtitle: 'Five-step guide for beginners getting started with the workspace',
-        route: 'steps',
-        keywords: 'steps guide how to start tutorial help',
-      },
-      {
-        title: 'Practice Quiz',
-        subtitle: 'Beginner Python quiz with live scoring and explanations',
-        route: 'practice',
-        keywords: 'practice quiz questions test score leaderboard',
-      },
-    ];
+  const allMatches = useMemo(
+    () => searchAppItems(query, searchCandidates),
+    [query, searchCandidates],
+  );
 
-    for (const tool of tools) {
-      if (
-        tool.title.toLowerCase().includes(q) ||
-        tool.subtitle.toLowerCase().includes(q) ||
-        tool.keywords.includes(q)
-      ) {
-        results.push({
-          id: `tool-${tool.route}`,
-          kind: 'Tool',
-          title: tool.title,
-          subtitle: tool.subtitle,
-          action: () => onNavigate(tool.route),
-        });
+  const categoryCounts = useMemo(() => {
+    return {
+      all: allMatches.length,
+      page: allMatches.filter((m) => m.category === 'page').length,
+      lesson: allMatches.filter((m) => m.category === 'lesson').length,
+      example: allMatches.filter((m) => m.category === 'example').length,
+      quiz: allMatches.filter((m) => m.category === 'quiz').length,
+    };
+  }, [allMatches]);
+
+  const filteredMatches = useMemo(() => {
+    if (searchCategory === 'all') return allMatches;
+    return allMatches.filter((m) => m.category === searchCategory);
+  }, [allMatches, searchCategory]);
+
+  const visibleResults = filteredMatches.slice(0, 10);
+
+  const runGoogleGroundingSearch = async (searchTerm: string) => {
+    const clean = searchTerm.trim().replace(/\s+/g, ' ');
+    if (!clean) return;
+    webAbortRef.current?.abort();
+    const controller = new AbortController();
+    webAbortRef.current = controller;
+
+    setWebLoading(true);
+    setWebError(null);
+    setWebResult(null);
+
+    try {
+      const res = await fetch('/api/search/grounding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({ query: clean }),
+      });
+      const data = (await res.json().catch(() => ({}))) as Partial<WebGroundingResult> & {
+        error?: string;
+      };
+      if (!res.ok) {
+        throw new Error(data.error || 'Could not fetch Google Search results.');
       }
+      setWebResult({
+        query: data.query ?? clean,
+        answer: data.answer ?? '',
+        sources: Array.isArray(data.sources) ? data.sources.filter((s) => isSafeWebUrl(s.uri)) : [],
+        model: data.model,
+      });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      setWebError(err instanceof Error ? err.message : 'Unable to reach Google Search grounding.');
+    } finally {
+      setWebLoading(false);
     }
+  };
 
-    for (const lesson of LEARNING_LESSONS) {
-      if (
-        lesson.title.toLowerCase().includes(q) ||
-        lesson.definition.toLowerCase().includes(q) ||
-        lesson.exampleCode.toLowerCase().includes(q)
-      ) {
-        results.push({
-          id: `lesson-${lesson.id}`,
-          kind: `Lesson ${lesson.index}`,
-          title: lesson.title,
-          subtitle: lesson.definition,
-          action: () => onOpenLesson(lesson.id),
-        });
-      }
+  const handleQueryChange = (next: string) => {
+    setQuery(next);
+    setWebError(null);
+    if (webResult && next.trim().replace(/\s+/g, ' ').toLowerCase() !== webResult.query.toLowerCase()) {
+      setWebResult(null);
     }
+  };
 
-    for (const preset of DETECTOR_PRESETS) {
-      if (
-        preset.label.toLowerCase().includes(q) ||
-        preset.code.toLowerCase().includes(q)
-      ) {
-        results.push({
-          id: `preset-${preset.id}`,
-          kind: 'Example',
-          title: preset.label,
-          subtitle: 'Load preset into Logic Detector & Step Simulator',
-          action: () => onLoadCodeInDetector(preset.code),
-        });
-      }
-    }
-
-    for (const errPreset of SYNTAX_ERROR_PRESETS) {
-      if (
-        errPreset.label.toLowerCase().includes(q) ||
-        errPreset.code.toLowerCase().includes(q)
-      ) {
-        results.push({
-          id: `syntax-${errPreset.id}`,
-          kind: 'Syntax Demo',
-          title: errPreset.label,
-          subtitle: 'Inspect and fix this mistake in Syntax Checker',
-          action: () => onOpenSyntaxCode(errPreset.code),
-        });
-      }
-    }
-
-    return results.slice(0, 7);
-  }, [query, onNavigate, onOpenLesson, onLoadCodeInDetector, onOpenSyntaxCode]);
+  const handleClearSearch = () => {
+    webAbortRef.current?.abort();
+    setQuery('');
+    setSearchCategory('all');
+    setWebLoading(false);
+    setWebError(null);
+    setWebResult(null);
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchResults.length > 0) {
-      searchResults[0].action();
-      setQuery('');
+    if (!normalizedQuery) return;
+    if (visibleResults.length > 0) {
+      visibleResults[0].action();
+      handleClearSearch();
+    } else if (allMatches.length > 0) {
+      // Never hide matches because of a category filter
+      setSearchCategory('all');
+      allMatches[0].action();
+      handleClearSearch();
+    } else {
+      void runGoogleGroundingSearch(trimmedQuery);
     }
   };
 
@@ -212,60 +247,216 @@ export function HomeView({
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-      {/* Home Search Bar */}
-      <section className="relative max-w-sm mb-5">
-        <form onSubmit={handleSearchSubmit} className="relative flex items-center">
-          <Search className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 absolute left-3 pointer-events-none" />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            aria-label="Search Python topics, examples, or tools"
-            placeholder="Search topics, errors, examples..."
-            className="w-full bg-white/95 dark:bg-[#111827]/95 border border-slate-200/90 dark:border-slate-800/90 focus:border-emerald-600 dark:focus:border-emerald-400 rounded-lg pl-8 pr-8 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 shadow-xs focus:outline-none transition-colors"
-          />
-          {query && (
+      {/* Home Search Bar + Live Google Search Grounding */}
+      <section className="relative max-w-2xl mb-5">
+        <form onSubmit={handleSearchSubmit} className="relative flex items-center gap-2 max-w-md">
+          <div className="relative flex-1 flex items-center">
+            <Search className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 absolute left-3 pointer-events-none" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => handleQueryChange(e.target.value)}
+              aria-label="Search Python topics, pages, features, or Google Search"
+              placeholder="Search Python topics, gates, test, errors..."
+              className="w-full bg-white/95 dark:bg-[#111827]/95 border border-slate-200/90 dark:border-slate-800/90 focus:border-emerald-600 dark:focus:border-emerald-400 rounded-lg pl-8 pr-8 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 shadow-xs focus:outline-none transition-colors"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                aria-label="Clear search"
+                className="absolute right-2 p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {normalizedQuery !== '' && (
             <button
               type="button"
-              onClick={() => setQuery('')}
-              aria-label="Clear search"
-              className="absolute right-2 p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+              onClick={() => void runGoogleGroundingSearch(trimmedQuery)}
+              disabled={webLoading}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-sky-300 dark:border-sky-500/40 bg-sky-50 dark:bg-sky-500/15 text-sky-800 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-500/25 text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-60"
             >
-              <X className="w-3.5 h-3.5" />
+              {webLoading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Globe className="w-3.5 h-3.5" />
+              )}
+              Google Search
             </button>
           )}
         </form>
 
-        {query.trim() !== '' && (
-          <div className="mt-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] divide-y divide-slate-100 dark:divide-slate-800/70 overflow-hidden shadow-md">
-            {searchResults.length === 0 ? (
-              <div className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
-                No matches for "{query.trim()}". Try searching for variables, boolean, indentation, loops, or sandbox.
+        {normalizedQuery !== '' && (
+          <div className="mt-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] overflow-hidden shadow-md">
+            {/* Category Filter Strip with Counts (Prevents Hidden Results) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-slate-100 dark:border-slate-800 bg-[#F8FAFC] dark:bg-[#0B0F17]">
+              <div className="flex flex-wrap items-center gap-1">
+                {(
+                  [
+                    { id: 'all', label: `All (${categoryCounts.all})` },
+                    { id: 'page', label: `Pages & Features (${categoryCounts.page})` },
+                    { id: 'lesson', label: `Lessons (${categoryCounts.lesson})` },
+                    { id: 'example', label: `Examples (${categoryCounts.example})` },
+                    { id: 'quiz', label: `Quiz & Test (${categoryCounts.quiz})` },
+                  ] as { id: SearchCategory; label: string }[]
+                ).map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setSearchCategory(tab.id)}
+                    className={`px-2 py-1 text-[11px] font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                      searchCategory === tab.id
+                        ? 'bg-emerald-600 text-white'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/70 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
+                {filteredMatches.length} {filteredMatches.length === 1 ? 'result' : 'results'}
+              </span>
+            </div>
+
+            {/* Matching Results / Filter Safeguard / Useful Empty State */}
+            {visibleResults.length > 0 ? (
+              <div className="divide-y divide-slate-100 dark:divide-slate-800/70 max-h-80 overflow-y-auto">
+                {visibleResults.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      item.action();
+                      handleClearSearch();
+                    }}
+                    className="w-full px-4 py-2.5 text-left flex items-center justify-between gap-4 hover:bg-emerald-50/70 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5 text-sm font-medium text-slate-900 dark:text-white">
+                        <span className="text-xs font-mono font-semibold text-emerald-700 dark:text-[#7CC4FF] shrink-0">
+                          {item.kind}
+                        </span>
+                        <span className="text-slate-300 dark:text-slate-600 shrink-0">·</span>
+                        <span className="truncate">{item.title}</span>
+                        <span className="text-[11px] text-slate-400 dark:text-slate-500 font-normal shrink-0">
+                          ({item.routeLabel})
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 truncate mt-0.5">
+                        {item.subtitle}
+                      </p>
+                    </div>
+                    <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  </button>
+                ))}
+              </div>
+            ) : allMatches.length > 0 ? (
+              <div className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300 flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  0 matches inside this category filter, but{' '}
+                  <strong className="tabular-nums">{allMatches.length}</strong>{' '}
+                  {allMatches.length === 1 ? 'match exists' : 'matches exist'} across all sections.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSearchCategory('all')}
+                  className="px-2.5 py-1 rounded-md bg-emerald-600 text-white text-[11px] font-semibold cursor-pointer"
+                >
+                  Show all {allMatches.length} matches
+                </button>
               </div>
             ) : (
-              searchResults.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    item.action();
-                    setQuery('');
-                  }}
-                  className="w-full px-4 py-2.5 text-left flex items-center justify-between gap-4 hover:bg-emerald-50/70 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-white">
-                      <span className="text-xs font-mono font-semibold text-emerald-700 dark:text-[#7CC4FF] shrink-0">
-                        {item.kind}
-                      </span>
-                      <span className="text-slate-300 dark:text-slate-600 shrink-0">·</span>
-                      <span className="truncate">{item.title}</span>
-                    </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 truncate mt-0.5">{item.subtitle}</p>
+              <SearchEmptyState
+                query={trimmedQuery}
+                webLoading={webLoading}
+                onSelectSuggestion={(suggestion) => {
+                  setSearchCategory('all');
+                  handleQueryChange(suggestion);
+                }}
+                onQuickNavigate={(route) => {
+                  onNavigate(route);
+                  handleClearSearch();
+                }}
+                onSearchGoogle={(term) => void runGoogleGroundingSearch(term)}
+              />
+            )}
+
+            {/* Google Search Grounding Answer & Sources Panel */}
+            {(webLoading || webError || webResult) && (
+              <div className="border-t border-sky-200 dark:border-sky-500/30 bg-sky-50/60 dark:bg-sky-950/20 px-4 py-3 space-y-2">
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="inline-flex items-center gap-1.5 font-semibold text-sky-800 dark:text-sky-300">
+                    <Globe className="w-3.5 h-3.5" />
+                    Google Search Grounded Result
+                  </span>
+                  {webResult?.model && (
+                    <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                      {webResult.model}
+                    </span>
+                  )}
+                </div>
+
+                {webLoading && (
+                  <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 py-1">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-600" />
+                    Searching the web for "{trimmedQuery}"...
                   </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                )}
+
+                {webError && (
+                  <div className="text-xs text-rose-700 dark:text-rose-400">{webError}</div>
+                )}
+
+                {webResult && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
+                      {webResult.answer}
+                    </p>
+                    {webResult.sources.length > 0 && (
+                      <div className="pt-1.5 border-t border-sky-200/70 dark:border-sky-500/20">
+                        <div className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                          Sources
+                        </div>
+                        <div className="flex flex-wrap gap-x-3 gap-y-1">
+                          {webResult.sources.slice(0, 5).map((src) => (
+                            <a
+                              key={src.uri}
+                              href={src.uri}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] text-sky-700 dark:text-sky-300 hover:underline max-w-[240px]"
+                            >
+                              <ExternalLink className="w-3 h-3 shrink-0" />
+                              <span className="truncate">{src.title}</span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Footer action for on-demand Google Search Grounding */}
+            {!webLoading && !webResult && (
+              <div className="border-t border-slate-100 dark:border-slate-800 bg-[#F8FAFC] dark:bg-[#0B0F17] px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="text-slate-500 dark:text-slate-400">
+                  Want up-to-date Python docs or web answers?
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void runGoogleGroundingSearch(trimmedQuery)}
+                  className="inline-flex items-center gap-1.5 text-sky-700 dark:text-sky-300 font-semibold hover:underline cursor-pointer"
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  Search Google for "{trimmedQuery}"
                 </button>
-              ))
+              </div>
             )}
           </div>
         )}
@@ -352,7 +543,7 @@ export function HomeView({
                   id="home-preview-slider"
                   type="range"
                   min={0}
-                  max={40}
+                  max={Math.max(100, previewVarValue)}
                   value={previewVarValue}
                   onChange={(e) =>
                     setPreviewCode(replaceNumericVarInCode(previewCode, previewVarName, Number(e.target.value)))

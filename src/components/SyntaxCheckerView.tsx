@@ -1,5 +1,15 @@
-import { CheckCircle2, AlertTriangle, Wrench, ArrowRight } from 'lucide-react';
-import { SYNTAX_ERROR_PRESETS } from '../data/curriculum';
+import { useState } from 'react';
+import {
+  CheckCircle2,
+  AlertTriangle,
+  Wrench,
+  ArrowRight,
+  Play,
+  Sparkles,
+  Trash2,
+  Terminal,
+} from 'lucide-react';
+import { DETECTOR_PRESETS, SYNTAX_ERROR_PRESETS } from '../data/curriculum';
 import type { PythonAnalysisResult, SyntaxIssue } from '../engine/pythonAnalyzer';
 
 interface SyntaxCheckerViewProps {
@@ -17,8 +27,37 @@ export function SyntaxCheckerView({
   onApplyFix,
   onOpenInDetector,
 }: SyntaxCheckerViewProps) {
+  const [lastExecutedCode, setLastExecutedCode] = useState<string | null>(null);
+  const [runCount, setRunCount] = useState(0);
+
   const lines = code.split('\n');
   const errorLines = new Set(analysis.syntaxIssues.map((i) => i.line));
+  const isEmpty = code.trim() === '';
+  const hasRun = lastExecutedCode !== null && lastExecutedCode === code;
+
+  const handleRunCode = () => {
+    if (isEmpty) return;
+    setLastExecutedCode(code);
+    setRunCount((c) => c + 1);
+  };
+
+  const handleTryExample = () => {
+    const currentIdx = DETECTOR_PRESETS.findIndex((p) => p.code.trim() === code.trim());
+    const nextPreset = DETECTOR_PRESETS[(currentIdx + 1) % DETECTOR_PRESETS.length];
+    onChangeCode(nextPreset.code);
+    setLastExecutedCode(nextPreset.code);
+    setRunCount((c) => c + 1);
+  };
+
+  const handleClear = () => {
+    onChangeCode('');
+    setLastExecutedCode(null);
+  };
+
+  const firstSyntaxSummary =
+    analysis.syntaxIssues.length > 0
+      ? `Line ${analysis.syntaxIssues[0].line}: ${analysis.syntaxIssues[0].title} — ${analysis.syntaxIssues[0].reason}`
+      : null;
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
@@ -34,7 +73,12 @@ export function SyntaxCheckerView({
         </div>
 
         <div className="flex items-center gap-2.5">
-          {analysis.isValidSyntax ? (
+          {isEmpty ? (
+            <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#111827] text-slate-700 dark:text-slate-300 text-sm font-semibold whitespace-nowrap">
+              <Terminal className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+              Syntax Status: Waiting for Code
+            </div>
+          ) : analysis.isValidSyntax ? (
             <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-emerald-300 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 text-sm font-semibold whitespace-nowrap">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               Syntax Status: Valid
@@ -75,7 +119,7 @@ export function SyntaxCheckerView({
               ))}
             </div>
 
-            <div className="flex min-h-[240px] bg-[#F8FAFC] dark:bg-[#0B0F17] font-mono text-[13.5px] leading-6">
+            <div className="flex min-h-[220px] bg-[#F8FAFC] dark:bg-[#0B0F17] font-mono text-[13.5px] leading-6">
               <div
                 aria-hidden="true"
                 className="w-10 shrink-0 py-3 text-right pr-2.5 select-none bg-[#F0FDF4] dark:bg-[#0B0F17] border-r border-emerald-100 dark:border-slate-800/60 tabular-nums"
@@ -101,9 +145,110 @@ export function SyntaxCheckerView({
                 value={code}
                 onChange={(e) => onChangeCode(e.target.value)}
                 spellCheck={false}
+                placeholder="Write or paste Python code here, or click Try Example..."
                 aria-label="Syntax checker Python editor"
-                className="flex-1 min-h-[240px] resize-y bg-transparent px-3.5 py-3 text-slate-900 dark:text-slate-100 focus:outline-none leading-6 font-mono caret-emerald-600 dark:caret-[#FFD43B]"
+                className="flex-1 min-h-[220px] resize-y bg-transparent px-3.5 py-3 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none leading-6 font-mono caret-emerald-600 dark:caret-[#FFD43B]"
               />
+            </div>
+
+            {/* Editor Action Controls: Run Code, Try Example, Clear */}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 border-t border-emerald-100 dark:border-slate-800/80 bg-emerald-50/40 dark:bg-[#0F1522]">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleRunCode}
+                  disabled={isEmpty}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-slate-950 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  Run Code
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleTryExample}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-emerald-300 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Try Example
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  disabled={code.length === 0}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-700/80 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300 hover:text-rose-700 dark:hover:text-rose-300 hover:border-rose-300 dark:hover:border-rose-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clear
+                </button>
+              </div>
+
+              <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 tabular-nums whitespace-nowrap">
+                {lines.length} {lines.length === 1 ? 'line' : 'lines'}
+              </span>
+            </div>
+
+            {/* Console Output Strip */}
+            <div className="px-4 py-2.5 border-t border-emerald-100 dark:border-slate-800/80 bg-[#F8FAFC] dark:bg-[#0B0F17]">
+              <div className="flex items-center justify-between gap-2 text-[11px] mb-1.5">
+                <div className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
+                  <Terminal className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Console Output</span>
+                </div>
+                {hasRun ? (
+                  firstSyntaxSummary ? (
+                    <span className="inline-flex items-center gap-1 font-medium text-rose-600 dark:text-rose-400">
+                      <AlertTriangle className="w-3 h-3" />
+                      Execution Blocked by Syntax Error
+                    </span>
+                  ) : analysis.runtimeNotice ? (
+                    <span className="inline-flex items-center gap-1 font-medium text-amber-700 dark:text-amber-400">
+                      <AlertTriangle className="w-3 h-3" />
+                      Runtime Notice
+                    </span>
+                  ) : (
+                    <span
+                      key={runCount}
+                      className="inline-flex items-center gap-1 font-medium text-emerald-700 dark:text-emerald-400 tabular-nums"
+                    >
+                      <CheckCircle2 className="w-3 h-3" />
+                      Executed ({analysis.steps.length} step{analysis.steps.length === 1 ? '' : 's'})
+                    </span>
+                  )
+                ) : (
+                  <span className="text-slate-400 dark:text-slate-500">
+                    Click Run Code to test output
+                  </span>
+                )}
+              </div>
+
+              <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] px-3 py-2 font-mono text-xs min-h-[42px] max-h-28 overflow-y-auto leading-5">
+                {isEmpty ? (
+                  <span className="text-slate-400 dark:text-slate-500">
+                    Editor cleared. Write Python code above or click Try Example.
+                  </span>
+                ) : !hasRun ? (
+                  <span className="text-slate-500 dark:text-slate-400">
+                    Ready — press <strong className="font-semibold text-emerald-700 dark:text-emerald-400">Run Code</strong> to check and execute.
+                  </span>
+                ) : firstSyntaxSummary ? (
+                  <span className="text-rose-600 dark:text-rose-400">{firstSyntaxSummary}</span>
+                ) : analysis.runtimeNotice ? (
+                  <span className="text-amber-700 dark:text-amber-400">{analysis.runtimeNotice}</span>
+                ) : analysis.finalOutput.length === 0 ? (
+                  <span className="text-slate-500 dark:text-slate-400">
+                    Program ran cleanly across {analysis.steps.length} step{analysis.steps.length === 1 ? '' : 's'} (no print() statements).
+                  </span>
+                ) : (
+                  analysis.finalOutput.map((line, i) => (
+                    <div key={i} className="text-emerald-700 dark:text-[#FFD43B] font-medium break-words">
+                      <span className="text-slate-400 dark:text-slate-500 mr-2">&gt;</span>
+                      {line}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
 
@@ -122,14 +267,32 @@ export function SyntaxCheckerView({
 
         {/* Right: Diagnostics */}
         <div className="lg:col-span-6 flex flex-col gap-3.5">
-          {analysis.isValidSyntax ? (
+          {isEmpty ? (
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white/95 dark:bg-[#111827]/95 p-5 shadow-xs">
+              <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200 font-semibold text-base">
+                <Terminal className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                <span>Editor Is Empty</span>
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
+                Paste your own Python code on the left, select a mistake preset to inspect how syntax fixes work, or load a working sample.
+              </p>
+              <button
+                type="button"
+                onClick={handleTryExample}
+                className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Try Example
+              </button>
+            </div>
+          ) : analysis.isValidSyntax ? (
             <div className="rounded-xl border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50/60 dark:bg-[#111827] p-5">
               <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-semibold text-base">
                 <CheckCircle2 className="w-5 h-5" />
                 <span>No Syntax Mistakes Found</span>
               </div>
               <p className="text-sm text-slate-700 dark:text-slate-300 mt-1.5 leading-relaxed">
-                Your colons, indentation levels, quotes, brackets, and Python keywords are valid. You can now watch it run step by step in the Logic Detector.
+                Your colons, indentation levels, quotes, brackets, and Python keywords are valid. You can run it on the left or watch it step by step in the Logic Detector.
               </p>
               <button
                 type="button"

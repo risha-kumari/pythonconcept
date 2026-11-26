@@ -11,15 +11,32 @@ import {
   Copy,
   Check,
   ArrowUpRight,
+  Globe,
+  ExternalLink,
 } from 'lucide-react';
 
 export type ChatbotRole = 'tutor' | 'debugger' | 'quizmaster';
+
+interface GroundingSource {
+  title: string;
+  uri: string;
+}
 
 interface ChatMessage {
   id: string;
   role: 'user' | 'model';
   text: string;
   streaming?: boolean;
+  sources?: GroundingSource[];
+}
+
+function isSafeWebUrl(uri: string): boolean {
+  try {
+    const parsed = new URL(uri);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 interface CodeBuddyChatProps {
@@ -163,6 +180,7 @@ export function CodeBuddyChat({
 }: CodeBuddyChatProps) {
   const [role, setRole] = useState<ChatbotRole>('tutor');
   const [fastMode, setFastMode] = useState(false);
+  const [useSearch, setUseSearch] = useState(true);
   const [includeCode, setIncludeCode] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -240,6 +258,7 @@ export function CodeBuddyChat({
           history: historySnapshot,
           role,
           fastMode,
+          useSearch,
           codeContext: includeCode ? currentCode : '',
           syntaxSummary: includeCode ? syntaxSummary : '',
         }),
@@ -258,6 +277,7 @@ export function CodeBuddyChat({
       const decoder = new TextDecoder();
       let buffer = '';
       let accumulated = '';
+      let finalSources: GroundingSource[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -277,6 +297,7 @@ export function CodeBuddyChat({
             chunk?: string;
             done?: boolean;
             error?: string;
+            sources?: GroundingSource[];
           };
 
           if (parsed.error) {
@@ -288,12 +309,19 @@ export function CodeBuddyChat({
               prev.map((m) => (m.id === modelId ? { ...m, text: accumulated } : m)),
             );
           }
+          if (Array.isArray(parsed.sources) && parsed.sources.length > 0) {
+            finalSources = parsed.sources.filter((s) => isSafeWebUrl(s.uri));
+          }
         }
       }
 
       setMessages((prev) =>
         prev
-          .map((m) => (m.id === modelId ? { ...m, streaming: false } : m))
+          .map((m) =>
+            m.id === modelId
+              ? { ...m, streaming: false, sources: finalSources.length > 0 ? finalSources : undefined }
+              : m,
+          )
           .filter((m) => m.id !== modelId || m.text.trim().length > 0),
       );
     } catch (err) {
@@ -344,7 +372,7 @@ export function CodeBuddyChat({
                 CodeBuddy
               </h2>
               <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate">
-                {activeRoleMeta.label} · {fastMode ? 'Instant Mode' : 'Balanced Mode'}
+                {activeRoleMeta.label} · {useSearch ? 'Google Search Grounded' : fastMode ? 'Instant Mode' : 'Balanced Mode'}
               </p>
             </div>
           </div>
@@ -392,31 +420,46 @@ export function CodeBuddyChat({
             })}
           </div>
 
-          <div className="flex items-center justify-between gap-2 text-[11px]">
+          <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
             <button
               type="button"
               onClick={() => setIncludeCode((v) => !v)}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border font-medium transition-colors cursor-pointer ${
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 includeCode
                   ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300'
                   : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-[#111827] dark:text-slate-400'
               }`}
             >
               <Code2 className="w-3 h-3" />
-              {includeCode ? 'Sharing Editor Code' : 'Code Context Off'}
+              {includeCode ? 'Code Context' : 'Code Off'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setUseSearch((v) => !v)}
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                useSearch
+                  ? 'border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-500/40 dark:bg-sky-500/15 dark:text-sky-300'
+                  : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-[#111827] dark:text-slate-400'
+              }`}
+            >
+              <Globe className="w-3 h-3" />
+              {useSearch ? 'Web Search On' : 'Web Search Off'}
             </button>
 
             <button
               type="button"
               onClick={() => setFastMode((v) => !v)}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border font-medium transition-colors cursor-pointer ${
-                fastMode
+              disabled={useSearch}
+              title={useSearch ? 'Web Search uses gemini-4-hydrogen' : 'Toggle fast model'}
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-50 ${
+                fastMode && !useSearch
                   ? 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300'
                   : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-[#111827] dark:text-slate-400'
               }`}
             >
               <Zap className="w-3 h-3" />
-              {fastMode ? 'Fast Mode On' : 'Fast Mode Off'}
+              {fastMode && !useSearch ? 'Fast Mode' : 'Standard'}
             </button>
           </div>
         </div>
@@ -475,7 +518,31 @@ export function CodeBuddyChat({
                   {msg.role === 'user' ? (
                     <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
                   ) : msg.text ? (
-                    renderFormattedMessage(msg.text, onApplyCode)
+                    <>
+                      {renderFormattedMessage(msg.text, onApplyCode)}
+                      {msg.sources && msg.sources.length > 0 && (
+                        <div className="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-700/70">
+                          <div className="text-[10px] font-semibold text-sky-700 dark:text-sky-400 mb-1 flex items-center gap-1">
+                            <Globe className="w-3 h-3" />
+                            Sources (Google Search)
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            {msg.sources.slice(0, 5).map((src) => (
+                              <a
+                                key={src.uri}
+                                href={src.uri}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] text-sky-700 dark:text-sky-300 hover:underline truncate"
+                              >
+                                <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+                                <span className="truncate">{src.title}</span>
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <span className="text-slate-500 dark:text-slate-400">Typing...</span>
                   )}

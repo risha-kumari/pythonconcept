@@ -437,3 +437,206 @@ export const PRACTICE_QUIZ: QuizQuestion[] = [
       'Lists are zero-indexed, so index 0 always accesses the very first element in the list (15).',
   },
 ];
+
+export type TestDifficulty = 'easy' | 'medium' | 'hard';
+
+export interface TestQuestion {
+  id: string;
+  difficulty: TestDifficulty;
+  points: number;
+  topic: string;
+  question: string;
+  codeSnippet?: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}
+
+export const TEST_QUESTIONS: TestQuestion[] = [
+  // EASY (5 questions · 1 pt each)
+  {
+    id: 't-e1',
+    difficulty: 'easy',
+    points: 1,
+    topic: 'Variables',
+    question: 'What is printed when this code runs?',
+    codeSnippet: `x = 5\nx = x + 3\nprint(x)`,
+    options: ['5', '3', '8', 'x + 3'],
+    correctIndex: 2,
+    explanation:
+      'First x stores 5. Next, x + 3 evaluates to 8 and reassigns x to 8, so print(x) outputs 8.',
+  },
+  {
+    id: 't-e2',
+    difficulty: 'easy',
+    points: 1,
+    topic: 'Data Types',
+    question: 'Which Python data type is returned by type("3.14")?',
+    options: ['float', 'int', 'str', 'bool'],
+    correctIndex: 2,
+    explanation:
+      'Because "3.14" is wrapped in quotation marks, Python treats it as text (str), not a decimal number (float).',
+  },
+  {
+    id: 't-e3',
+    difficulty: 'easy',
+    points: 1,
+    topic: 'Boolean Logic',
+    question: 'What is the output of False or True?',
+    options: ['False', 'True', 'None', 'SyntaxError'],
+    correctIndex: 1,
+    explanation:
+      'The or operator evaluates to True whenever at least one operand is True.',
+  },
+  {
+    id: 't-e4',
+    difficulty: 'easy',
+    points: 1,
+    topic: 'Python Syntax',
+    question: 'Which statement has valid Python syntax?',
+    options: [
+      'if age >= 18\n    print("OK")',
+      'if age >= 18:\n    print("OK")',
+      'if (age >= 18) {\n    print("OK")\n}',
+      'if age => 18:\n    print("OK")',
+    ],
+    correctIndex: 1,
+    explanation:
+      'Python requires a colon (:) after the if condition and indentation on the next line. Python uses >=, not =>, and does not use curly braces for blocks.',
+  },
+  {
+    id: 't-e5',
+    difficulty: 'easy',
+    points: 1,
+    topic: 'Lists',
+    question: 'What does items[1] return for items = ["pen", "book", "bag"]?',
+    options: ['"pen"', '"book"', '"bag"', 'IndexError'],
+    correctIndex: 1,
+    explanation:
+      'List indexing starts at 0: items[0] is "pen", items[1] is "book", and items[2] is "bag".',
+  },
+
+  // MEDIUM (5 questions · 2 pts each)
+  {
+    id: 't-m1',
+    difficulty: 'medium',
+    points: 2,
+    topic: 'Conditionals',
+    question: 'What will this if / elif / else chain print?',
+    codeSnippet: `score = 75\nif score >= 90:\n    print("A")\nelif score >= 70:\n    print("B")\nelif score >= 60:\n    print("C")\nelse:\n    print("F")`,
+    options: ['A', 'B', 'B and C', 'F'],
+    correctIndex: 1,
+    explanation:
+      'score >= 90 is False, so Python checks the first elif (score >= 70), which is True. It prints "B" and skips all remaining elif and else branches.',
+  },
+  {
+    id: 't-m2',
+    difficulty: 'medium',
+    points: 2,
+    topic: 'Loops',
+    question: 'What value of total is printed after this loop finishes?',
+    codeSnippet: `total = 0\nfor i in range(1, 5):\n    total += i\nprint(total)`,
+    options: ['6', '10', '15', '5'],
+    correctIndex: 1,
+    explanation:
+      'range(1, 5) produces 1, 2, 3, and 4 (stopping before 5). Adding them gives 1 + 2 + 3 + 4 = 10.',
+  },
+  {
+    id: 't-m3',
+    difficulty: 'medium',
+    points: 2,
+    topic: 'Strings',
+    question: 'What does word[1:4] evaluate to when word = "Python"?',
+    options: ['"Pyt"', '"yth"', '"ytho"', '"tho"'],
+    correctIndex: 1,
+    explanation:
+      'String slicing [start:end] starts at index 1 ("y") and stops before index 4 ("o"), returning indices 1, 2, and 3: "yth".',
+  },
+  {
+    id: 't-m4',
+    difficulty: 'medium',
+    points: 2,
+    topic: 'Boolean Logic',
+    question: 'What is the result of this Boolean expression?',
+    codeSnippet: `a = False\nb = True\nprint(not a and (5 > 10 or b))`,
+    options: ['True', 'False', 'None', 'Error'],
+    correctIndex: 0,
+    explanation:
+      'not a becomes True. Inside parentheses, 5 > 10 is False, and False or True is True. Finally, True and True evaluates to True.',
+  },
+  {
+    id: 't-m5',
+    difficulty: 'medium',
+    points: 2,
+    topic: 'Functions',
+    question: 'What is printed by the following function call?',
+    codeSnippet: `def multiply(a, b=2):\n    return a * b\n\nprint(multiply(5) + multiply(2, 3))`,
+    options: ['10', '12', '16', '11'],
+    correctIndex: 2,
+    explanation:
+      'multiply(5) uses the default b=2, returning 5 * 2 = 10. multiply(2, 3) overrides b with 3, returning 2 * 3 = 6. Their sum is 10 + 6 = 16.',
+  },
+
+  // HARD (5 questions · 3 pts each)
+  {
+    id: 't-h1',
+    difficulty: 'hard',
+    points: 3,
+    topic: 'Loops',
+    question: 'What is the final output of this while loop?',
+    codeSnippet: `n = 0\nsum_odd = 0\nwhile n < 6:\n    n += 1\n    if n % 2 == 0:\n        continue\n    sum_odd += n\nprint(sum_odd)`,
+    options: ['6', '9', '12', '15'],
+    correctIndex: 1,
+    explanation:
+      'n increments from 1 to 6. Even values (2, 4, 6) hit continue and skip sum_odd += n. Only odd values (1, 3, 5) are added: 1 + 3 + 5 = 9.',
+  },
+  {
+    id: 't-h2',
+    difficulty: 'hard',
+    points: 3,
+    topic: 'Lists',
+    question: 'What does this code print about list aliasing?',
+    codeSnippet: `a = [1, 2]\nb = a\nb.append(3)\nprint(a, len(a))`,
+    options: ['[1, 2] 2', '[1, 2, 3] 3', '[1, 2] 3', 'TypeError'],
+    correctIndex: 1,
+    explanation:
+      'b = a does not copy the list; both names reference the exact same list object in memory. Appending 3 via b mutates a as well, so a is [1, 2, 3] with length 3.',
+  },
+  {
+    id: 't-h3',
+    difficulty: 'hard',
+    points: 3,
+    topic: 'Conditionals & Loops',
+    question: 'What number is printed by this nested loop?',
+    codeSnippet: `count = 0\nfor i in range(3):\n    for j in range(3):\n        if i < j:\n            count += 1\nprint(count)`,
+    options: ['3', '4', '6', '9'],
+    correctIndex: 0,
+    explanation:
+      'For i, j in {0, 1, 2}, the pairs where i < j are (0, 1), (0, 2), and (1, 2). That is 3 pairs total, so count becomes 3.',
+  },
+  {
+    id: 't-h4',
+    difficulty: 'hard',
+    points: 3,
+    topic: 'Data Structures',
+    question: 'What is the output of this dictionary lookup?',
+    codeSnippet: `scores = {"amy": 10, "leo": 15}\nval = scores.get("max", 4) + scores["amy"]\nprint(val)`,
+    options: ['KeyError', '10', '14', '19'],
+    correctIndex: 2,
+    explanation:
+      'scores.get("max", 4) safely returns the fallback 4 because "max" is not in the dictionary. Adding scores["amy"] (10) produces 14.',
+  },
+  {
+    id: 't-h5',
+    difficulty: 'hard',
+    points: 3,
+    topic: 'Functions',
+    question: 'What does this recursive function print?',
+    codeSnippet: `def cascade(n):\n    if n <= 1:\n        return 1\n    return n + cascade(n - 1)\n\nprint(cascade(4))`,
+    options: ['4', '6', '10', '24'],
+    correctIndex: 2,
+    explanation:
+      'cascade(4) returns 4 + cascade(3) -> 4 + 3 + cascade(2) -> 4 + 3 + 2 + cascade(1) = 4 + 3 + 2 + 1 = 10.',
+  },
+];
+

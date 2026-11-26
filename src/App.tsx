@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   BookOpen,
   CheckSquare,
+  ClipboardCheck,
   Terminal,
   Sun,
   Moon,
@@ -32,10 +33,12 @@ import { ExecutionGraphsPanel, replaceNumericVarInCode } from './components/Exec
 import { SyntaxCheckerView } from './components/SyntaxCheckerView';
 import { LearningView } from './components/LearningView';
 import { PracticeView } from './components/PracticeView';
+import { TestView } from './components/TestView';
 import { CollabDrawer } from './components/CollabDrawer';
 import { BackToTopButton } from './components/BackToTopButton';
 import { InteractiveBackground, type BgPalette } from './components/InteractiveBackground';
 import { CodeBuddyChat } from './components/CodeBuddyChat';
+import { TopNavSearch } from './components/TopNavSearch';
 
 interface SidebarItem {
   id: AppRoute;
@@ -101,6 +104,14 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     iconColor: 'text-rose-600 dark:text-rose-400',
     activeClass:
       'bg-rose-50/95 dark:bg-rose-500/15 text-rose-900 dark:text-white border-rose-200 dark:border-rose-500/40',
+  },
+  {
+    id: 'test',
+    label: 'Test',
+    icon: ClipboardCheck,
+    iconColor: 'text-violet-600 dark:text-violet-400',
+    activeClass:
+      'bg-violet-50/95 dark:bg-violet-500/15 text-violet-900 dark:text-white border-violet-200 dark:border-violet-500/40',
   },
 ];
 
@@ -387,9 +398,9 @@ export default function App() {
           aria-hidden="true"
           className="h-[2px] w-full bg-gradient-to-r from-emerald-500 via-sky-500 via-amber-400 to-rose-500"
         />
-        <div className="px-4 sm:px-6 h-[62px] flex items-center justify-between gap-6">
+        <div className="px-4 sm:px-6 h-[62px] flex items-center justify-between gap-3 sm:gap-5">
           {/* Zone 1: Brand & Mobile Sidebar Toggle */}
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
             <button
               type="button"
               onClick={() => setMobileMenuOpen((v) => !v)}
@@ -402,16 +413,17 @@ export default function App() {
             <button
               type="button"
               onClick={() => navigate('home')}
-              className="text-base sm:text-lg font-semibold tracking-tight text-slate-900 dark:text-white whitespace-nowrap shrink-0 cursor-pointer"
+              className="text-sm sm:text-base xl:text-lg font-semibold tracking-tight text-slate-900 dark:text-white whitespace-nowrap shrink-0 cursor-pointer"
             >
-              Python Logic &amp; Syntax Detector
+              <span className="sm:hidden">PyLogic</span>
+              <span className="hidden sm:inline">Python Logic &amp; Syntax Detector</span>
             </button>
           </div>
 
           {/* Zone 2: Interactive Horizontal Top Navigation Bar */}
           <nav
             aria-label="Top navigation"
-            className="hidden lg:flex items-center gap-4 xl:gap-5"
+            className="hidden xl:flex items-center gap-3.5 2xl:gap-5"
           >
             {SIDEBAR_ITEMS.map((item) => {
               const active = route === item.id;
@@ -439,15 +451,37 @@ export default function App() {
             })}
           </nav>
 
-          {/* Zone 3: Primary Action */}
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-          >
-            <Users className="w-3.5 h-3.5" />
-            Live Room
-          </button>
+          {/* Zone 3: Top Navigation Search & Primary Action */}
+          <div className="flex items-center gap-2.5 sm:gap-3 flex-1 xl:flex-initial justify-end min-w-0">
+            <TopNavSearch
+              onNavigate={navigate}
+              onLoadCodeInDetector={handleLoadInDetector}
+              onOpenLesson={(lessonId) => {
+                setSelectedLessonId(lessonId);
+                navigate('learning');
+              }}
+              onOpenSyntaxCode={(syntaxCode) => {
+                handleCodeChange(syntaxCode);
+                navigate('syntax');
+              }}
+              onOpenDetectorTab={(tab) => {
+                setDetectorTab(tab);
+                navigate('detector');
+              }}
+              onOpenCodeBuddy={() => setChatOpen(true)}
+              onOpenLiveRoom={() => setDrawerOpen(true)}
+            />
+
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-2 text-xs font-semibold rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Live Room</span>
+              <span className="sm:hidden">Live</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -704,6 +738,12 @@ export default function App() {
                   handleCodeChange(syntaxCode);
                   navigate('syntax');
                 }}
+                onOpenDetectorTab={(tab) => {
+                  setDetectorTab(tab);
+                  navigate('detector');
+                }}
+                onOpenCodeBuddy={() => setChatOpen(true)}
+                onOpenLiveRoom={() => setDrawerOpen(true)}
               />
             )}
 
@@ -834,7 +874,7 @@ export default function App() {
                               : 'text-slate-600 dark:text-slate-400 hover:text-indigo-700 dark:hover:text-slate-200'
                           }`}
                         >
-                          Logic Gates
+                          Boolean Gates
                         </button>
                       </div>
                     </div>
@@ -904,6 +944,16 @@ export default function App() {
 
             {route === 'practice' && (
               <PracticeView
+                playerName={collab.displayName}
+                onSubmitScore={(score, total) =>
+                  collab.submitScore({ quizScore: score, quizTotal: total })
+                }
+                onOpenLeaderboard={() => setDrawerOpen(true)}
+              />
+            )}
+
+            {route === 'test' && (
+              <TestView
                 playerName={collab.displayName}
                 onSubmitScore={(score, total) =>
                   collab.submitScore({ quizScore: score, quizTotal: total })

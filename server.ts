@@ -197,6 +197,67 @@ function upsertScore(input: {
   return entry;
 }
 
+export interface GroundingSource {
+  title: string;
+  uri: string;
+}
+
+function isSafeHttpUrl(rawUrl: unknown): rawUrl is string {
+  if (typeof rawUrl !== 'string' || !rawUrl.trim()) return false;
+  try {
+    const parsed = new URL(rawUrl.trim());
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function extractGroundingMetadata(payload: unknown): {
+  sources: GroundingSource[];
+  searchQueries: string[];
+} {
+  const candidates = (
+    payload as {
+      candidates?: Array<{
+        groundingMetadata?: {
+          groundingChunks?: Array<{ web?: { uri?: unknown; title?: unknown } }>;
+          webSearchQueries?: unknown[];
+        };
+      }>;
+    }
+  )?.candidates;
+
+  const metadata = candidates?.[0]?.groundingMetadata;
+  const rawChunks = Array.isArray(metadata?.groundingChunks) ? metadata.groundingChunks : [];
+  const seen = new Set<string>();
+  const sources: GroundingSource[] = [];
+
+  for (const chunk of rawChunks) {
+    const uri = chunk?.web?.uri;
+    if (!isSafeHttpUrl(uri)) continue;
+    const normalizedUri = uri.trim();
+    if (seen.has(normalizedUri)) continue;
+    seen.add(normalizedUri);
+    const rawTitle = typeof chunk?.web?.title === 'string' ? chunk.web.title.trim() : '';
+    let fallbackHost = normalizedUri;
+    try {
+      fallbackHost = new URL(normalizedUri).hostname;
+    } catch {
+      // keep uri
+    }
+    sources.push({
+      title: rawTitle || fallbackHost,
+      uri: normalizedUri,
+    });
+  }
+
+  const searchQueries = Array.isArray(metadata?.webSearchQueries)
+    ? metadata.webSearchQueries.filter((q): q is string => typeof q === 'string' && q.trim().length > 0)
+    : [];
+
+  return { sources, searchQueries };
+}
+
 async function startServer() {
   const app = express();
   app.use(express.json({ limit: '64kb' }));
@@ -234,6 +295,85 @@ async function startServer() {
     res.json({ room: serializeRoom(room) });
   });
 
+  app.post('/api/search/grounding', async (req, res) => {
+    if (!process.env.GEMINI_API_KEY) {
+      res.status(500).json({
+        error:
+          'Gemini API key is not configured. Please check your key in the Settings > Secrets panel.',
+      });
+      return;
+    }
+
+    const body = req.body as { query?: unknown };
+    const cleanQuery =
+      typeof body?.query === 'string'
+        ? body.query.trim().replace(/\s+/g, ' ').slice(0, 400)
+        : '';
+
+    if (!cleanQuery) {
+      res.status(400).json({ error: 'Please enter a search query.' });
+      return;
+    }
+
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model: 'gemini-4-hydrogen',
+          contents: `Provide an accurate, up-to-date, beginner-friendly explanation for this Python or programming search query. Keep it concise (under 160 words) and include a short Python example when helpful.\n\nQuery: ${cleanQuery}`,
+          config: {
+            systemInstruction:
+              'You are a concise Python documentation & concept search assistant backed by Google Search. Always verify current Python syntax, standard library behavior, and version details using Google Search.',
+            tools: [{ googleSearch: {} }],
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+          },
+        });
+
+        const answer = (response.text ?? '').trim();
+        const { sources, searchQueries } = extractGroundingMetadata(response);
+
+        if (!answer) {
+          res.status(502).json({ error: 'Search returned an empty response. Please try again.' });
+          return;
+        }
+
+        res.json({
+          query: cleanQuery,
+          answer,
+          sources,
+          searchQueries,
+          model: 'gemini-4-hydrogen',
+        });
+        return;
+      } catch (err) {
+        lastError = err;
+        const msg = err instanceof Error ? err.message : String(err);
+        const isTransient =
+          msg.includes('503') || msg.includes('500') || msg.includes('ECONNRESET') || msg.includes('timeout');
+        if (attempt === 0 && isTransient) {
+          await new Promise((r) => setTimeout(r, 400));
+          continue;
+        }
+        break;
+      }
+    }
+
+    const errMsg = lastError instanceof Error ? lastError.message : 'Unexpected Gemini API error.';
+    if (errMsg.includes('PERMISSION_DENIED') || errMsg.includes('API_KEY_INVALID') || errMsg.includes('403') || errMsg.includes('401')) {
+      res.status(403).json({
+        error: 'Unable to authenticate with Gemini. Please check your API key in the Settings > Secrets panel.',
+      });
+      return;
+    }
+    if (errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('429')) {
+      res.status(429).json({
+        error: 'Rate limit reached right now. Please wait a moment and try again.',
+      });
+      return;
+    }
+    res.status(502).json({ error: `Google Search grounding failed: ${errMsg}` });
+  });
+
   app.post('/api/chat', async (req, res) => {
     if (!process.env.GEMINI_API_KEY) {
       res.status(500).json({
@@ -248,6 +388,7 @@ async function startServer() {
       history?: unknown;
       role?: unknown;
       fastMode?: unknown;
+      useSearch?: unknown;
       codeContext?: unknown;
     };
 
@@ -260,7 +401,9 @@ async function startServer() {
 
     const roleKey: ChatbotRole =
       body.role === 'debugger' || body.role === 'quizmaster' ? body.role : 'tutor';
-    const modelName = body.fastMode === true ? 'gemini-3.1-flash-lite' : 'gemini-4-hydrogen';
+    const useSearch = body.useSearch === true;
+    const modelName =
+      useSearch || body.fastMode !== true ? 'gemini-4-hydrogen' : 'gemini-3.1-flash-lite';
 
     const rawHistory = Array.isArray(body.history) ? body.history.slice(-20) : [];
     const formattedHistory = rawHistory
@@ -294,6 +437,7 @@ async function startServer() {
           history: formattedHistory,
           config: {
             systemInstruction,
+            ...(useSearch ? { tools: [{ googleSearch: {} }] } : {}),
             ...(modelName === 'gemini-4-hydrogen'
               ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } }
               : {}),
@@ -301,11 +445,12 @@ async function startServer() {
         });
         const response = await chat.sendMessage({ message: userMessage });
         const reply = (response.text ?? '').trim();
+        const { sources } = useSearch ? extractGroundingMetadata(response) : { sources: [] };
         if (!reply) {
           res.status(502).json({ error: 'CodeBuddy returned an empty response. Please try again.' });
           return;
         }
-        res.json({ reply, model: modelName, role: roleKey });
+        res.json({ reply, model: modelName, role: roleKey, sources });
         return;
       } catch (err) {
         lastError = err;
@@ -350,6 +495,7 @@ async function startServer() {
       history?: unknown;
       role?: unknown;
       fastMode?: unknown;
+      useSearch?: unknown;
       codeContext?: unknown;
       syntaxSummary?: unknown;
     };
@@ -363,7 +509,9 @@ async function startServer() {
 
     const roleKey: ChatbotRole =
       body.role === 'debugger' || body.role === 'quizmaster' ? body.role : 'tutor';
-    const modelName = body.fastMode === true ? 'gemini-3.1-flash-lite' : 'gemini-4-hydrogen';
+    const useSearch = body.useSearch === true;
+    const modelName =
+      useSearch || body.fastMode !== true ? 'gemini-4-hydrogen' : 'gemini-3.1-flash-lite';
 
     const rawHistory = Array.isArray(body.history) ? body.history.slice(-12) : [];
     const formattedHistory = rawHistory
@@ -414,12 +562,14 @@ async function startServer() {
         history: formattedHistory,
         config: {
           systemInstruction,
+          ...(useSearch ? { tools: [{ googleSearch: {} }] } : {}),
           ...(modelName === 'gemini-4-hydrogen'
             ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } }
             : {}),
         },
       });
 
+      const collectedSources = new Map<string, GroundingSource>();
       const stream = await chat.sendMessageStream({ message: userMessage });
       for await (const chunk of stream) {
         if (closed) break;
@@ -427,9 +577,21 @@ async function startServer() {
         if (text) {
           res.write(`data: ${JSON.stringify({ chunk: text })}\n\n`);
         }
+        if (useSearch) {
+          const { sources } = extractGroundingMetadata(chunk);
+          for (const src of sources) {
+            collectedSources.set(src.uri, src);
+          }
+        }
       }
       if (!closed) {
-        res.write(`data: ${JSON.stringify({ done: true, model: modelName })}\n\n`);
+        res.write(
+          `data: ${JSON.stringify({
+            done: true,
+            model: modelName,
+            sources: Array.from(collectedSources.values()),
+          })}\n\n`,
+        );
         res.end();
       }
     } catch (err) {
