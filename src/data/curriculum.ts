@@ -141,187 +141,205 @@ export const LEARNING_LESSONS: LessonTopic[] = [
     index: '01',
     title: 'Python Syntax',
     definition:
-      'Syntax is the set of grammar rules Python follows. Unlike languages that use curly braces { }, Python uses colons (:) and consistent 4-space indentation to organize code blocks.',
+      'Syntax just means the spelling and spacing rules of Python. Python uses a colon (:) at the end of a line and 4 spaces at the start of the next line to show what goes inside a group.',
     exampleCode: `score = 80
 if score >= 50:
     print("Passed")`,
     visualType: 'syntax',
-    question: 'What happens if you forget to indent the line right after an if statement?',
+    question: 'What happens if you forget the 4 spaces on the line right after an if statement?',
     options: [
-      'Python skips the line silently',
-      'Python raises an IndentationError',
-      'Python automatically adds 4 spaces',
+      'Python skips the line quietly',
+      'Python shows a spacing error (IndentationError)',
+      'Python adds the 4 spaces for you',
       'The program prints False',
     ],
     correctIndex: 1,
     explanation:
-      'Python uses indentation to know which lines belong inside a block. Missing indentation after a colon (:) triggers an IndentationError.',
+      'Python needs those spaces after a colon (:) to know which lines belong inside the if check. Without the spaces, Python stops and shows an IndentationError.',
   },
   {
     id: 'variables',
     index: '02',
     title: 'Variables',
     definition:
-      'A variable is a named label that stores a value in memory so your program can read, update, and reuse it later using the = assignment operator.',
+      'A variable is like a labeled box that holds a value, such as a number or a word. You use a single = sign to put a value into the box so you can use or change it later.',
     exampleCode: `name = "Maya"
 points = 10
 points = points + 5
 print(name, points)`,
     visualType: 'variables',
-    question: 'In Python, what does the single = sign in age = 18 do?',
+    question: 'In Python, what does age = 18 do?',
     options: [
       'Checks if age is equal to 18',
-      'Assigns the value 18 to the variable age',
-      'Prints 18 to the screen',
-      'Deletes the variable age',
+      'Saves the number 18 inside the name age',
+      'Prints 18 on the screen',
+      'Deletes the word age',
     ],
     correctIndex: 1,
     explanation:
-      'A single = assigns (stores) a value on the right into the variable name on the left. Double == is used for comparison.',
+      'One = sign saves the value on the right (18) into the box on the left (age). If you want to compare two things, use two equals signs (==).',
   },
   {
     id: 'datatypes',
     index: '03',
     title: 'Data Types',
     definition:
-      'Every value in Python has a type that determines what operations work on it: int (whole numbers), float (decimals), str (text), and bool (True or False).',
+      'Python puts values into 4 easy groups: whole numbers (int, like 19), numbers with a dot (float, like 3.85), words inside quotes (str, like "Hi"), and yes/no values (bool: True or False).',
     exampleCode: `age = 19
 gpa = 3.85
 course = "CS101"
 enrolled = True`,
     visualType: 'datatypes',
-    question: 'Which Python data type represents "42" wrapped in quotation marks?',
-    options: ['int', 'float', 'str (string)', 'bool'],
+    question: 'What kind of value is "42" when it has quote marks around it?',
+    options: [
+      'int (whole number)',
+      'float (decimal number)',
+      'str (text)',
+      'bool (True or False)',
+    ],
     correctIndex: 2,
     explanation:
-      'Anything enclosed inside single or double quotes is a string (str), even if the characters inside are digits.',
+      'Anything written inside quote marks (" ") is treated as text (a string, or str), even if it looks like a number.',
   },
   {
     id: 'operators',
     index: '04',
     title: 'Operators',
     definition:
-      'Operators perform actions on values. Arithmetic operators (+, -, *, /) compute numbers, while comparison operators (==, !=, >, <, >=, <=) produce True or False.',
+      'Operators are math and compare signs. Math signs (+, -, *, /) calculate numbers. Compare signs (==, !=, >, <, >=, <=) check two values and answer True or False.',
     exampleCode: `x = 12
 y = 5
 print(x + y)
 print(x >= 10)`,
     visualType: 'operators',
-    question: 'What does 10 != 12 evaluate to in Python?',
-    options: ['True', 'False', '2', 'SyntaxError'],
+    question: 'What does 10 != 12 mean and give in Python?',
+    options: ['True (10 is not equal to 12)', 'False', '2', 'An error'],
     correctIndex: 0,
     explanation:
-      'The != operator means "not equal to". Since 10 is not equal to 12, the expression evaluates to True.',
+      'The != sign asks "Are these two NOT equal?". Since 10 and 12 are different numbers, the answer is True.',
   },
   {
     id: 'boolean',
     index: '05',
     title: 'Boolean Logic',
     definition:
-      'Boolean logic combines True and False values using and (both must be True), or (at least one must be True), and not (flips the Boolean value).',
+      'Boolean logic mixes True and False answers. Use "and" when both parts must be True, "or" when at least one part needs to be True, and "not" to flip True to False (or False to True).',
     exampleCode: `is_adult = True
 has_id = False
 print(is_adult and has_id)
 print(is_adult or has_id)`,
     visualType: 'boolean',
-    question: 'What is the result of (True and False) or True?',
-    options: ['False', 'True', 'None', 'Error'],
+    question: 'What is the answer to (True and False) or True?',
+    options: ['False', 'True', 'Nothing', 'Error'],
     correctIndex: 1,
     explanation:
-      'First, (True and False) evaluates to False. Then False or True evaluates to True because "or" only needs one side to be True.',
+      'First, (True and False) is False because both are not True. Next, False or True is True because "or" only needs one side to be True.',
   },
   {
     id: 'ifelse',
     index: '06',
     title: 'If-Else',
     definition:
-      'Conditional statements let your program choose different paths. Python checks the if condition first, optional elif checks next, and falls back to else if all were False.',
+      'If-else lets your code pick which path to take, just like a fork in the road. Python checks "if" first, checks "elif" next if needed, and runs "else" at the end when nothing else was True.',
     exampleCode: `temp = 32
 if temp > 30:
     print("Hot day")
 else:
     print("Mild day")`,
     visualType: 'ifelse',
-    question: 'When does an else block execute?',
+    question: 'When does the "else" part of the code run?',
     options: [
-      'Always, even if the if condition was True',
-      'Only when the preceding if and elif conditions are False',
-      'Before the if condition is checked',
-      'Only when there is a syntax error',
+      'Every time, even if the "if" check was True',
+      'Only when the "if" and "elif" checks above it were False',
+      'Before the "if" check starts',
+      'Only when your code has a mistake',
     ],
     correctIndex: 1,
     explanation:
-      'The else branch is a fallback path that runs exclusively when none of the earlier if or elif conditions evaluated to True.',
+      '"else" is the backup plan. It only runs if none of the "if" or "elif" checks above it were True.',
   },
   {
     id: 'loops',
     index: '07',
     title: 'Loops',
     definition:
-      'Loops repeat a block of code automatically. A for loop steps through every item in a sequence (like range(3)), while a while loop repeats as long as a condition stays True.',
+      'Loops repeat the same steps automatically so you do not have to write them again and again. A "for" loop steps through items one by one, and a "while" loop keeps going while a rule is True.',
     exampleCode: `for i in range(1, 4):
     print("Step", i)`,
     visualType: 'loops',
     question: 'How many times does the loop `for i in range(3):` run?',
-    options: ['2 times', '3 times (0, 1, 2)', '4 times (0, 1, 2, 3)', 'Forever'],
+    options: [
+      '2 times',
+      '3 times (for 0, 1, and 2)',
+      '4 times (for 0, 1, 2, and 3)',
+      'It never stops',
+    ],
     correctIndex: 1,
     explanation:
-      'range(3) generates 3 numbers starting at 0 and stopping before 3: 0, 1, and 2.',
+      'range(3) gives 3 numbers starting from 0 and stopping right before 3: 0, 1, and 2.',
   },
   {
     id: 'functions',
     index: '08',
     title: 'Functions',
     definition:
-      'A function groups reusable steps under a name using def. It can accept inputs (parameters) and send a computed result back using return.',
+      'A function is a mini-recipe you name using "def" so you can reuse those steps anytime. You can send values into it and use "return" to hand back the final answer.',
     exampleCode: `def add(a, b):
     return a + b
 
 print(add(4, 7))`,
     visualType: 'functions',
-    question: 'Which keyword is used to send a value back from a function?',
+    question: 'Which word sends an answer back out of a function?',
     options: ['send', 'output', 'return', 'def'],
     correctIndex: 2,
     explanation:
-      'def defines the function, and return sends a value back to the line of code that called the function.',
+      '"def" creates the function, and "return" hands the answer back to the line that called it.',
   },
   {
     id: 'lists',
     index: '09',
     title: 'Lists',
     definition:
-      'A list stores an ordered collection of items inside square brackets [ ]. Items are indexed starting at 0 and can be added or changed dynamically.',
+      'A list keeps several items in order inside square brackets [ ], just like a shopping list. Python starts counting spots from 0, and you can add or change items anytime.',
     exampleCode: `fruits = ["apple", "mango", "kiwi"]
 print(fruits[0])
 fruits.append("pear")`,
     visualType: 'lists',
     question: 'In colors = ["red", "green", "blue"], what is colors[1]?',
-    options: ['"red"', '"green"', '"blue"', 'IndexError'],
+    options: ['"red"', '"green"', '"blue"', 'An error'],
     correctIndex: 1,
     explanation:
-      'Python lists use zero-based indexing: index 0 is "red", index 1 is "green", and index 2 is "blue".',
+      'Python starts counting list spots at 0: spot 0 is "red", spot 1 is "green", and spot 2 is "blue".',
   },
   {
     id: 'strings',
     index: '10',
     title: 'Strings',
     definition:
-      'A string is a sequence of characters wrapped in quotes. You can measure its length with len(), transform case with .upper(), or slice parts using [start:end].',
+      'A string is just text inside quote marks, like "Python". You can count its letters with len(), turn it into big letters with .upper(), or cut out a piece using [start:end].',
     exampleCode: `word = "Python"
 print(word.upper())
 print(word[0:2])`,
     visualType: 'strings',
-    question: 'What does len("Code") return?',
+    question: 'What does len("Code") give you?',
     options: ['3', '4', '5', '"Code"'],
     correctIndex: 1,
     explanation:
-      'len() counts every character in the string. "Code" has 4 characters: C, o, d, e.',
+      'len() counts how many letters or characters are inside the quotes. "Code" has 4 letters: C, o, d, e.',
   },
 ];
 
+export type PracticeCategory =
+  | 'logic-gates'
+  | 'boolean-expressions'
+  | 'syntax-errors'
+  | 'core-python';
+
 export interface QuizQuestion {
   id: string;
+  category: PracticeCategory;
   topic: string;
+  subTopic: string;
   question: string;
   codeSnippet?: string;
   options: string[];
@@ -329,24 +347,91 @@ export interface QuizQuestion {
   explanation: string;
 }
 
+export const PRACTICE_CATEGORIES: { id: PracticeCategory; label: string }[] = [
+  { id: 'logic-gates', label: 'Logic Gates' },
+  { id: 'boolean-expressions', label: 'Boolean Expressions' },
+  { id: 'syntax-errors', label: 'Syntax Errors' },
+  { id: 'core-python', label: 'Core Python' },
+];
+
 export const PRACTICE_QUIZ: QuizQuestion[] = [
+  // LOGIC GATES
   {
-    id: 'q1',
-    topic: 'Comparison Operators',
-    question: 'What does "==" mean in Python?',
+    id: 'lg1',
+    category: 'logic-gates',
+    topic: 'Logic Gates',
+    subTopic: 'Basic Gates (AND / OR / NOT)',
+    question: 'If inputs are A = 1 (True) and B = 0 (False), what is the output of an AND gate?',
+    codeSnippet: `A = True\nB = False\noutput = A and B\nprint(output)`,
+    options: ['True (Bulb ON)', 'False (Bulb OFF)', 'None', 'SyntaxError'],
+    correctIndex: 1,
+    explanation:
+      'An AND gate only outputs 1 (True) when BOTH inputs A and B are 1. Since B is False (0), the output is False and the bulb stays OFF.',
+  },
+  {
+    id: 'lg2',
+    category: 'logic-gates',
+    topic: 'Logic Gates',
+    subTopic: 'XOR Gate',
+    question: 'When does a 2-input XOR gate output 1 (True)?',
+    codeSnippet: `A = True\nB = False\noutput = A != B\nprint(output)`,
     options: [
-      'Assigns a value to a variable',
-      'Checks whether two values are equal',
-      'Multiplies two numbers',
-      'Ends an if statement',
+      'Only when both A and B are 1',
+      'Only when A and B are different (one 1, one 0)',
+      'Only when both A and B are 0',
+      'Whenever A is 1',
     ],
     correctIndex: 1,
     explanation:
-      '"==" is the equality comparison operator. It checks if two values are equal and returns True or False.',
+      'XOR (Exclusive OR) outputs 1 (True) strictly when its two inputs differ: (1, 0) or (0, 1). Matching inputs like (1, 1) or (0, 0) produce 0.',
   },
   {
+    id: 'lg3',
+    category: 'logic-gates',
+    topic: 'Logic Gates',
+    subTopic: 'Universal Gates (NAND / NOR)',
+    question: 'What is the output of a NAND gate when both inputs are A = True and B = True?',
+    codeSnippet: `A = True\nB = True\noutput = not (A and B)\nprint(output)`,
+    options: ['True (1)', 'False (0)', 'True and False', 'Error'],
+    correctIndex: 1,
+    explanation:
+      'NAND means NOT-AND. Since A and B is True for (True, True), applying NOT flips the result to False (0).',
+  },
+  {
+    id: 'lg4',
+    category: 'logic-gates',
+    topic: 'Logic Gates',
+    subTopic: 'Universal Gates (NAND / NOR)',
+    question: 'Which input pair makes a NOR gate (not (A or B)) turn the output bulb ON (True)?',
+    options: [
+      'A = True, B = True',
+      'A = True, B = False',
+      'A = False, B = True',
+      'A = False, B = False',
+    ],
+    correctIndex: 3,
+    explanation:
+      'A NOR gate is the inverse of OR. Because A or B is False only when both A and B are False, not (A or B) outputs True exclusively for (False, False).',
+  },
+  {
+    id: 'lg5',
+    category: 'logic-gates',
+    topic: 'Logic Gates',
+    subTopic: 'XNOR Gate',
+    question: 'What will this Python XNOR gate simulation print?',
+    codeSnippet: `A = False\nB = False\noutput = not (A ^ B)\nprint(output)`,
+    options: ['False', 'True', '0', 'TypeError'],
+    correctIndex: 1,
+    explanation:
+      'XNOR (Exclusive NOR) checks equivalence: it outputs True whenever A and B are equal—both True or both False. Here both are False, so output is True.',
+  },
+
+  // BOOLEAN EXPRESSIONS
+  {
     id: 'q2',
-    topic: 'Boolean Logic',
+    category: 'boolean-expressions',
+    topic: 'Boolean Expressions',
+    subTopic: 'Basic Operators (and / or / not)',
     question: 'What is the result of "True and False"?',
     options: ['True', 'False', 'None', 'SyntaxError'],
     correctIndex: 1,
@@ -354,31 +439,10 @@ export const PRACTICE_QUIZ: QuizQuestion[] = [
       'The "and" operator only returns True when BOTH sides are True. Since one side is False, the result is False.',
   },
   {
-    id: 'q3',
-    topic: 'Conditionals',
-    question: 'What happens when an "if" condition is False?',
-    options: [
-      'Python crashes with a LogicError',
-      'Python runs the indented if block anyway',
-      'Python skips the if block and checks elif or else if present',
-      'Python restarts the program',
-    ],
-    correctIndex: 2,
-    explanation:
-      'When an if condition evaluates to False, its indented block is skipped and Python moves on to any elif, else, or the next unindented line.',
-  },
-  {
-    id: 'q4',
-    topic: 'Python Syntax',
-    question: 'Which symbol is required at the end of an "if" statement header?',
-    options: ['; (semicolon)', ': (colon)', '{ (curly brace)', '-> (arrow)'],
-    correctIndex: 1,
-    explanation:
-      'Python requires a colon (:) after if, elif, else, for, while, and def headers before starting an indented block.',
-  },
-  {
     id: 'q5',
-    topic: 'Boolean Logic',
+    category: 'boolean-expressions',
+    topic: 'Boolean Expressions',
+    subTopic: 'Basic Operators (and / or / not)',
     question: 'What does "not True" return?',
     options: ['True', 'False', '0', '"not True"'],
     correctIndex: 1,
@@ -387,7 +451,9 @@ export const PRACTICE_QUIZ: QuizQuestion[] = [
   },
   {
     id: 'q6',
-    topic: 'Boolean Logic',
+    category: 'boolean-expressions',
+    topic: 'Boolean Expressions',
+    subTopic: 'Basic Operators (and / or / not)',
     question: 'What is the result of "False or True"?',
     options: ['True', 'False', 'None', 'Error'],
     correctIndex: 0,
@@ -395,8 +461,59 @@ export const PRACTICE_QUIZ: QuizQuestion[] = [
       'The "or" operator returns True if at least one of the two sides is True.',
   },
   {
+    id: 'be1',
+    category: 'boolean-expressions',
+    topic: 'Boolean Expressions',
+    subTopic: 'Operator Precedence',
+    question: 'What does this expression print in Python (watch operator precedence)?',
+    codeSnippet: `result = True or False and False\nprint(result)`,
+    options: ['False', 'True', 'None', 'SyntaxError'],
+    correctIndex: 1,
+    explanation:
+      'In Python, "and" has higher precedence than "or", so False and False evaluates first (False). Then True or False evaluates to True.',
+  },
+  {
+    id: 'be2',
+    category: 'boolean-expressions',
+    topic: 'Boolean Expressions',
+    subTopic: 'Compound Conditions',
+    question: 'What value is printed by this compound Boolean expression?',
+    codeSnippet: `age = 16\nhas_pass = True\nis_banned = False\nprint((age >= 18 or has_pass) and not is_banned)`,
+    options: ['False', 'True', '16', 'TypeError'],
+    correctIndex: 1,
+    explanation:
+      'age >= 18 is False, but has_pass is True so (False or True) is True. not is_banned is also True, and True and True equals True.',
+  },
+  {
+    id: 'be3',
+    category: 'boolean-expressions',
+    topic: 'Boolean Expressions',
+    subTopic: 'Negation & Comparisons',
+    question: 'What is the final Boolean output of this code?',
+    codeSnippet: `x = 10\ny = 5\nprint(not (x < y or x == 10))`,
+    options: ['True', 'False', '10', 'None'],
+    correctIndex: 1,
+    explanation:
+      'Inside parentheses, x < y is False while x == 10 is True, making (False or True) equal True. Applying outer "not" flips True to False.',
+  },
+
+  // SYNTAX ERRORS
+  {
+    id: 'q4',
+    category: 'syntax-errors',
+    topic: 'Syntax Errors',
+    subTopic: 'Colons & Headers',
+    question: 'Which symbol is required at the end of an "if" statement header?',
+    options: ['; (semicolon)', ': (colon)', '{ (curly brace)', '-> (arrow)'],
+    correctIndex: 1,
+    explanation:
+      'Python requires a colon (:) after if, elif, else, for, while, and def headers before starting an indented block.',
+  },
+  {
     id: 'q7',
-    topic: 'Syntax & Indentation',
+    category: 'syntax-errors',
+    topic: 'Syntax Errors',
+    subTopic: 'IndentationError',
     question: 'What will happen when you run this code?',
     codeSnippet: `age = 20\nif age >= 18:\nprint("Adult")`,
     options: [
@@ -410,8 +527,112 @@ export const PRACTICE_QUIZ: QuizQuestion[] = [
       'Line 3 is not indented under the if statement. Python requires indentation (typically 4 spaces) inside every block.',
   },
   {
+    id: 'se1',
+    category: 'syntax-errors',
+    topic: 'Syntax Errors',
+    subTopic: 'Assignment (=) vs Comparison (==)',
+    question: 'Why does this code fail with a SyntaxError?',
+    codeSnippet: `score = 100\nif score = 100:\n    print("Perfect")`,
+    options: [
+      'score should be wrapped in quotes',
+      'Line 2 uses assignment (=) instead of equality comparison (==)',
+      'print("Perfect") needs a semicolon',
+      '100 is too large for an if condition',
+    ],
+    correctIndex: 1,
+    explanation:
+      'Inside an if condition, Python requires "==" to test equality. Using a single "=" (assignment) raises a SyntaxError.',
+  },
+  {
+    id: 'se2',
+    category: 'syntax-errors',
+    topic: 'Syntax Errors',
+    subTopic: 'Unclosed Brackets & Quotes',
+    question: 'What syntax mistake is present in this snippet?',
+    codeSnippet: `nums = [10, 20, 30\nprint(nums)`,
+    options: [
+      'Missing colon after nums',
+      'Missing closing square bracket ] on line 1',
+      'print(nums) needs indentation',
+      'Lists cannot hold three numbers',
+    ],
+    correctIndex: 1,
+    explanation:
+      'The list literal opened with "[" on line 1 is never closed with "]". Every opening bracket, parenthesis, or brace must have a matching closer.',
+  },
+  {
+    id: 'se3',
+    category: 'syntax-errors',
+    topic: 'Syntax Errors',
+    subTopic: 'Unclosed Brackets & Quotes',
+    question: 'How do you fix the SyntaxError in this code?',
+    codeSnippet: `greeting = "Hello Python\nprint(greeting)`,
+    options: [
+      'Add a closing double quote " at the end of line 1',
+      'Remove print(greeting)',
+      'Indent line 2 by 4 spaces',
+      'Replace = with ==',
+    ],
+    correctIndex: 0,
+    explanation:
+      'Line 1 opens a string with " but misses the closing ", causing an unterminated string literal SyntaxError.',
+  },
+  {
+    id: 'se4',
+    category: 'syntax-errors',
+    topic: 'Syntax Errors',
+    subTopic: 'Colons & Headers',
+    question: 'Which line causes a SyntaxError in this conditional block?',
+    codeSnippet: `temp = 25\nif temp > 30:\n    print("Hot")\nelif temp > 20\n    print("Warm")`,
+    options: [
+      'Line 1 (temp = 25)',
+      'Line 2 (if temp > 30:)',
+      'Line 4 (elif temp > 20 is missing a colon :)',
+      'Line 5 (print("Warm"))',
+    ],
+    correctIndex: 2,
+    explanation:
+      'Every elif header must end with a colon (:), just like if and else. Line 4 should be "elif temp > 20:".',
+  },
+
+  // CORE PYTHON
+  {
+    id: 'q1',
+    category: 'core-python',
+    topic: 'Core Python',
+    subTopic: 'Comparison Operators',
+    question: 'What does "==" mean in Python?',
+    options: [
+      'Assigns a value to a variable',
+      'Checks whether two values are equal',
+      'Multiplies two numbers',
+      'Ends an if statement',
+    ],
+    correctIndex: 1,
+    explanation:
+      '"==" is the equality comparison operator. It checks if two values are equal and returns True or False.',
+  },
+  {
+    id: 'q3',
+    category: 'core-python',
+    topic: 'Core Python',
+    subTopic: 'Conditionals',
+    question: 'What happens when an "if" condition is False?',
+    options: [
+      'Python crashes with a LogicError',
+      'Python runs the indented if block anyway',
+      'Python skips the if block and checks elif or else if present',
+      'Python restarts the program',
+    ],
+    correctIndex: 2,
+    explanation:
+      'When an if condition evaluates to False, its indented block is skipped and Python moves on to any elif, else, or the next unindented line.',
+  },
+  {
     id: 'q8',
-    topic: 'Loops',
+    category: 'core-python',
+    topic: 'Core Python',
+    subTopic: 'Loops',
     question: 'What numbers does range(4) produce in a for loop?',
     options: ['1, 2, 3, 4', '0, 1, 2, 3', '0, 1, 2, 3, 4', '1, 2, 3'],
     correctIndex: 1,
@@ -420,7 +641,9 @@ export const PRACTICE_QUIZ: QuizQuestion[] = [
   },
   {
     id: 'q9',
-    topic: 'Functions',
+    category: 'core-python',
+    topic: 'Core Python',
+    subTopic: 'Functions',
     question: 'Which keyword starts a function definition in Python?',
     options: ['function', 'func', 'def', 'define'],
     correctIndex: 2,
@@ -429,7 +652,9 @@ export const PRACTICE_QUIZ: QuizQuestion[] = [
   },
   {
     id: 'q10',
-    topic: 'Lists',
+    category: 'core-python',
+    topic: 'Core Python',
+    subTopic: 'Lists',
     question: 'What does nums[0] return if nums = [15, 30, 45]?',
     options: ['0', '15', '30', '45'],
     correctIndex: 1,

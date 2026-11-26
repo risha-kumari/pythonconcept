@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { CheckCircle2, XCircle, Play, ArrowRight } from 'lucide-react';
+import { CheckCircle2, XCircle, Play, ArrowLeft, ArrowRight } from 'lucide-react';
 import { LEARNING_LESSONS, type LessonTopic } from '../data/curriculum';
 
 interface LearningViewProps {
@@ -25,14 +25,14 @@ function LessonInteractiveVisual({ lesson }: { lesson: LessonTopic }) {
       <div className="rounded-xl border border-emerald-200/80 dark:border-slate-800/80 bg-[#F0FDF4]/70 dark:bg-[#0B0F17] p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
-            Interactive Indentation Toggle
+            Try Changing the Line Spacing
           </span>
           <button
             type="button"
             onClick={() => setShowIndent((v) => !v)}
             className="px-3 py-1 text-xs font-semibold rounded-md bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-emerald-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 cursor-pointer"
           >
-            {showIndent ? 'Remove Indentation' : 'Restore 4-Space Indent'}
+            {showIndent ? 'Remove Spaces (Break It)' : 'Add 4 Spaces (Fix It)'}
           </button>
         </div>
         <div className="font-mono text-xs bg-white dark:bg-[#111827] rounded-lg p-3 border border-slate-200 dark:border-slate-800 space-y-1">
@@ -49,8 +49,8 @@ function LessonInteractiveVisual({ lesson }: { lesson: LessonTopic }) {
         </div>
         <div className={`text-xs font-medium ${showIndent ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
           {showIndent
-            ? 'Valid: 4 spaces show print() belongs inside the if block.'
-            : 'IndentationError: Python expects spaces after the colon (:).'}
+            ? 'Works! The 4 spaces show that print("Passed") belongs inside the if check.'
+            : 'Spacing error! Python needs 4 spaces on the line right after a colon (:).'}
         </div>
       </div>
     );
@@ -61,7 +61,7 @@ function LessonInteractiveVisual({ lesson }: { lesson: LessonTopic }) {
       <div className="rounded-xl border border-emerald-200/80 dark:border-slate-800/80 bg-[#F0FDF4]/70 dark:bg-[#0B0F17] p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <label htmlFor="var-slider" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-            Assign new value: <code className="font-mono text-emerald-700 dark:text-[#FFD43B]">points = {sliderVal}</code>
+            Give the box a new number: <code className="font-mono text-emerald-700 dark:text-[#FFD43B]">points = {sliderVal}</code>
           </label>
           <span className="text-xs font-mono text-slate-500 dark:text-slate-400 tabular-nums">{sliderVal}</span>
         </div>
@@ -95,9 +95,9 @@ function LessonInteractiveVisual({ lesson }: { lesson: LessonTopic }) {
   if (lesson.visualType === 'datatypes') {
     const samples = [
       { label: '42', type: 'int', note: 'Whole number' },
-      { label: '3.14', type: 'float', note: 'Decimal number' },
+      { label: '3.14', type: 'float', note: 'Number with a dot' },
       { label: '"42"', type: 'str', note: 'Text inside quotes' },
-      { label: 'True', type: 'bool', note: 'True or False state' },
+      { label: 'True', type: 'bool', note: 'Yes / No (True or False)' },
     ];
     return (
       <div className="rounded-xl border border-emerald-200/80 dark:border-slate-800/80 bg-[#F0FDF4]/70 dark:bg-[#0B0F17] p-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -121,14 +121,14 @@ function LessonInteractiveVisual({ lesson }: { lesson: LessonTopic }) {
       <div className="rounded-xl border border-emerald-200/80 dark:border-slate-800/80 bg-[#F0FDF4]/70 dark:bg-[#0B0F17] p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between text-xs">
           <label htmlFor="op-slider" className="text-slate-700 dark:text-slate-300 font-medium">
-            Test value <code className="font-mono text-emerald-700 dark:text-[#7CC4FF]">age = {sliderVal}</code>
+            Slide to test <code className="font-mono text-emerald-700 dark:text-[#7CC4FF]">age = {sliderVal}</code>
           </label>
           <span
             className={`font-mono font-semibold ${
               passed ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
             }`}
           >
-            age &gt;= 18 → {passed ? 'True' : 'False'}
+            age &gt;= 18 → {passed ? 'True (Yes)' : 'False (No)'}
           </span>
         </div>
         <input
@@ -249,7 +249,7 @@ function LessonInteractiveVisual({ lesson }: { lesson: LessonTopic }) {
             onClick={() => setLoopStep((s) => (s + 1) % 3)}
             className="px-3 py-1 text-xs font-semibold rounded-md bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
           >
-            Next Iteration
+            Next Step
           </button>
         </div>
         <div className="grid grid-cols-3 gap-2">
@@ -276,10 +276,10 @@ function LessonInteractiveVisual({ lesson }: { lesson: LessonTopic }) {
       <div className="rounded-xl border border-emerald-200/80 dark:border-slate-800/80 bg-[#F0FDF4]/70 dark:bg-[#0B0F17] p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between text-xs">
           <label htmlFor="fn-slider" className="text-slate-700 dark:text-slate-300 font-medium">
-            Input <code className="font-mono text-emerald-700 dark:text-[#7CC4FF]">n = {fnInput}</code>
+            Pick a number <code className="font-mono text-emerald-700 dark:text-[#7CC4FF]">n = {fnInput}</code>
           </label>
           <span className="font-mono font-semibold text-emerald-700 dark:text-emerald-400">
-            return n * n → {fnInput * fnInput}
+            gives back n * n → {fnInput * fnInput}
           </span>
         </div>
         <input
@@ -338,7 +338,7 @@ function LessonInteractiveVisual({ lesson }: { lesson: LessonTopic }) {
     <div className="rounded-xl border border-emerald-200/80 dark:border-slate-800/80 bg-[#F0FDF4]/70 dark:bg-[#0B0F17] p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <label htmlFor="str-demo" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-          Edit string:
+          Type any word:
         </label>
         <input
           id="str-demo"
@@ -361,7 +361,7 @@ function LessonInteractiveVisual({ lesson }: { lesson: LessonTopic }) {
         ))}
       </div>
       <div className="font-mono text-xs text-slate-600 dark:text-slate-400">
-        len("{word}") = <span className="text-emerald-700 dark:text-[#FFD43B] font-semibold">{word.length}</span> · .upper() = "{word.toUpperCase()}"
+        letter count = <span className="text-emerald-700 dark:text-[#FFD43B] font-semibold">{word.length}</span> · all caps = "{word.toUpperCase()}"
       </div>
     </div>
   );
@@ -394,19 +394,26 @@ export function LearningView({
     }
   };
 
+  const activeIndex = LEARNING_LESSONS.findIndex((l) => l.id === activeLesson.id);
+  const prevLesson = activeIndex > 0 ? LEARNING_LESSONS[activeIndex - 1] : null;
+  const nextLesson =
+    activeIndex >= 0 && activeIndex < LEARNING_LESSONS.length - 1
+      ? LEARNING_LESSONS[activeIndex + 1]
+      : null;
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
       <div className="flex flex-wrap items-end justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800/80">
         <div>
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
-            Interactive Python Lessons
+            Easy Python Lessons
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-            Step through 10 foundational topics with interactive visuals, clear examples, and instant concept checks.
+            Learn 10 Python basics step by step with simple words, hands-on visuals, and short check-up questions.
           </p>
         </div>
         <div className="text-xs font-semibold text-emerald-700 dark:text-slate-300 tabular-nums">
-          Completed {completedLessons.length} / {LEARNING_LESSONS.length} lessons
+          Finished {completedLessons.length} of {LEARNING_LESSONS.length} lessons
         </div>
       </div>
 
@@ -481,7 +488,7 @@ export function LearningView({
           {/* Animated Visual & Interactive Demo */}
           <div>
             <div className="text-xs font-semibold text-slate-800 dark:text-slate-300 mb-2">
-              Interactive Visual Demo
+              Try It Yourself
             </div>
             <LessonInteractiveVisual key={activeLesson.id} lesson={activeLesson} />
           </div>
@@ -489,7 +496,7 @@ export function LearningView({
           {/* Practice Question */}
           <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 flex flex-col gap-3">
             <div className="text-xs font-semibold text-emerald-700 dark:text-[#7CC4FF]">
-              Quick Check Question
+              Test What You Learned
             </div>
             <p className="text-sm font-semibold text-slate-900 dark:text-white">{activeLesson.question}</p>
 
@@ -535,12 +542,35 @@ export function LearningView({
                 )}
                 <div>
                   <div className="font-semibold mb-0.5">
-                    {isCorrect ? 'Correct!' : 'Not quite — here is why:'}
+                    {isCorrect ? 'Nice job! That is right.' : 'Good try — here is the simple answer:'}
                   </div>
                   <p>{activeLesson.explanation}</p>
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Easy Previous / Next Lesson Buttons */}
+          <div className="pt-3 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between gap-3">
+            <button
+              type="button"
+              disabled={!prevLesson}
+              onClick={() => prevLesson && setSelectedId(prevLesson.id)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 cursor-pointer disabled:cursor-default"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              {prevLesson ? `Previous: ${prevLesson.title}` : 'First Lesson'}
+            </button>
+
+            <button
+              type="button"
+              disabled={!nextLesson}
+              onClick={() => nextLesson && setSelectedId(nextLesson.id)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-40 cursor-pointer disabled:cursor-default"
+            >
+              {nextLesson ? `Next: ${nextLesson.title}` : 'All Lessons Done'}
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </div>

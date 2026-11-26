@@ -462,155 +462,160 @@ export function HomeView({
         )}
       </section>
 
-      {/* Hero Split */}
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
-        <div className="lg:col-span-6 flex flex-col justify-center gap-4">
-          <div className="text-xs font-semibold text-teal-700 dark:text-teal-300">
-            Interactive Python Analyzer · Step-by-Step Visualizer
-          </div>
-
-          <h1
-            className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-slate-900 dark:text-white leading-[1.12]"
-            style={{ textWrap: 'balance' }}
-          >
-            Visualize Python’s Logic,{' '}
-            <span className="bg-gradient-to-r from-emerald-600 via-sky-600 to-teal-500 dark:from-emerald-400 dark:via-sky-300 dark:to-amber-300 bg-clip-text text-transparent">
-              Line by Line.
-            </span>
-          </h1>
-
-          <p className="text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed max-w-xl">
-            Write or paste Python code to spot logic patterns, fix syntax mistakes in plain English, animate True/False branches, and watch variable graphs update live.
-          </p>
-
-          <div className="flex flex-wrap items-center gap-3 pt-1">
-            <button
-              type="button"
-              onClick={() => onNavigate('detector')}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-600 hover:from-emerald-700 hover:via-teal-700 hover:to-sky-700 text-white shadow-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              Open Logic Detector
-              <ArrowRight className="w-4 h-4" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onNavigate('sandbox')}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-sky-800 dark:hover:text-white bg-white/95 dark:bg-[#111827]/90 border border-slate-300 dark:border-slate-700 hover:border-sky-400 dark:hover:border-sky-500 rounded-lg shadow-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              Open Sandbox
-            </button>
-          </div>
+      {/* Hero Statement */}
+      <section className="flex flex-col gap-4 pb-6">
+        <div className="text-xs font-semibold text-teal-700 dark:text-teal-300">
+          Interactive Python Analyzer · Step-by-Step Visualizer
         </div>
 
-        {/* Live Interactive Quick Sandbox */}
-        <div className="lg:col-span-6 flex flex-col rounded-xl border border-emerald-200/90 dark:border-slate-800/80 bg-white/95 dark:bg-[#111827]/95 overflow-hidden shadow-sm">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-emerald-100 dark:border-slate-800/80 bg-gradient-to-r from-emerald-50 via-sky-50 to-amber-50 dark:from-[#0F1522] dark:to-[#131B2E]">
-            <span className="text-xs font-semibold text-slate-900 dark:text-slate-200">
-              Quick Live Preview
-            </span>
-            <button
-              type="button"
-              onClick={() => onLoadCodeInDetector(previewCode)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-[#FFD43B] hover:underline cursor-pointer whitespace-nowrap"
-            >
-              <Play className="w-3 h-3 fill-current" />
-              Simulate Step-by-Step
-            </button>
+        <h1
+          className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-slate-900 dark:text-white leading-[1.12] max-w-4xl"
+          style={{ textWrap: 'balance' }}
+        >
+          Visualize Python’s Logic,{' '}
+          <span className="bg-gradient-to-r from-emerald-600 via-sky-600 to-teal-500 dark:from-emerald-400 dark:via-sky-300 dark:to-amber-300 bg-clip-text text-transparent">
+            Line by Line.
+          </span>
+        </h1>
+
+        <p className="text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed max-w-2xl">
+          Write or paste Python code to spot logic patterns, fix syntax mistakes in plain English, animate True/False branches, and watch variable graphs update live.
+        </p>
+
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          <button
+            type="button"
+            onClick={() => onNavigate('detector')}
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-600 hover:from-emerald-700 hover:via-teal-700 hover:to-sky-700 text-white shadow-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+          >
+            Open Logic Detector
+            <ArrowRight className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigate('sandbox')}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-sky-800 dark:hover:text-white bg-white/95 dark:bg-[#111827]/90 border border-slate-300 dark:border-slate-700 hover:border-sky-400 dark:hover:border-sky-500 rounded-lg shadow-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+          >
+            Open Sandbox
+          </button>
+        </div>
+      </section>
+
+      {/* Live Interactive Quick Preview Workbench (Full-Width Below Hero) */}
+      <section className="rounded-xl border border-emerald-200/90 dark:border-slate-800/80 bg-white/95 dark:bg-[#111827]/95 overflow-hidden shadow-sm">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-emerald-100 dark:border-slate-800/80 bg-gradient-to-r from-emerald-50 via-sky-50 to-amber-50 dark:from-[#0F1522] dark:to-[#131B2E]">
+          <span className="text-xs font-semibold text-slate-900 dark:text-slate-200">
+            Quick Live Preview
+          </span>
+          <button
+            type="button"
+            onClick={() => onLoadCodeInDetector(previewCode)}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-[#FFD43B] hover:underline cursor-pointer whitespace-nowrap"
+          >
+            <Play className="w-3 h-3 fill-current" />
+            Simulate Step-by-Step
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
+          {/* Code Input */}
+          <div className="lg:col-span-7 flex flex-col border-b lg:border-b-0 lg:border-r border-emerald-100 dark:border-slate-800/80">
+            <textarea
+              value={previewCode}
+              onChange={(e) => setPreviewCode(e.target.value)}
+              spellCheck={false}
+              aria-label="Quick Python preview editor"
+              className="w-full flex-1 min-h-[156px] resize-none bg-[#F8FAFC] dark:bg-[#0B0F17] px-4 py-3.5 font-mono text-[13px] leading-6 text-slate-900 dark:text-slate-100 focus:outline-none caret-emerald-600 dark:caret-[#FFD43B]"
+            />
           </div>
 
-          <textarea
-            value={previewCode}
-            onChange={(e) => setPreviewCode(e.target.value)}
-            spellCheck={false}
-            aria-label="Quick Python preview editor"
-            className="w-full flex-1 min-h-[128px] resize-none bg-[#F8FAFC] dark:bg-[#0B0F17] px-4 py-3 font-mono text-[13px] leading-6 text-slate-900 dark:text-slate-100 focus:outline-none caret-emerald-600 dark:caret-[#FFD43B]"
-          />
+          {/* Live Controls & Output Inspector */}
+          <div className="lg:col-span-5 flex flex-col justify-between bg-[#F0FDF4]/50 dark:bg-[#0D131F]">
+            <div className="px-4 py-3.5 flex flex-col gap-3">
+              {previewVarName && previewVarValue !== null && (
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <label htmlFor="home-preview-slider" className="text-slate-700 dark:text-slate-300 font-medium">
+                      Drag to test <code className="font-mono text-emerald-700 dark:text-[#7CC4FF]">{previewVarName}</code>
+                    </label>
+                    <span className="font-mono font-semibold text-emerald-700 dark:text-[#FFD43B] tabular-nums">
+                      {previewVarName} = {previewVarValue}
+                    </span>
+                  </div>
+                  <input
+                    id="home-preview-slider"
+                    type="range"
+                    min={0}
+                    max={Math.max(100, previewVarValue)}
+                    value={previewVarValue}
+                    onChange={(e) =>
+                      setPreviewCode(replaceNumericVarInCode(previewCode, previewVarName, Number(e.target.value)))
+                    }
+                    className="w-full accent-emerald-600 dark:accent-[#FFD43B] cursor-pointer"
+                  />
+                </div>
+              )}
 
-          {/* Interactive Live Slider + Mini Concept Graph */}
-          <div className="px-4 py-2.5 border-t border-emerald-100 dark:border-slate-800/80 bg-[#F0FDF4]/60 dark:bg-[#0D131F] flex flex-col gap-2">
-            {previewVarName && previewVarValue !== null && (
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between text-xs">
-                  <label htmlFor="home-preview-slider" className="text-slate-700 dark:text-slate-300 font-medium">
-                    Drag to test <code className="font-mono text-emerald-700 dark:text-[#7CC4FF]">{previewVarName}</code>
-                  </label>
-                  <span className="font-mono font-semibold text-emerald-700 dark:text-[#FFD43B] tabular-nums">
-                    {previewVarName} = {previewVarValue}
+              {analysis.steps.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">Flow:</span>
+                  <div className="flex-1 flex items-center gap-1">
+                    {analysis.steps.slice(0, 8).map((st) => {
+                      const barColor =
+                        st.conditionResult === true
+                          ? 'bg-emerald-600'
+                          : st.conditionResult === false
+                            ? 'bg-rose-500'
+                            : st.statementType === 'print'
+                              ? 'bg-amber-500'
+                              : 'bg-sky-500';
+                      return (
+                        <div
+                          key={st.stepIndex}
+                          title={`Line ${st.line}: ${st.description}`}
+                          className={`h-2 flex-1 rounded-full ${barColor} transition-colors`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 tabular-nums shrink-0">
+                    {analysis.steps.length} steps
                   </span>
                 </div>
-                <input
-                  id="home-preview-slider"
-                  type="range"
-                  min={0}
-                  max={Math.max(100, previewVarValue)}
-                  value={previewVarValue}
-                  onChange={(e) =>
-                    setPreviewCode(replaceNumericVarInCode(previewCode, previewVarName, Number(e.target.value)))
-                  }
-                  className="w-full accent-emerald-600 dark:accent-[#FFD43B] cursor-pointer"
-                />
-              </div>
-            )}
-
-            {analysis.steps.length > 0 && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">Flow:</span>
-                <div className="flex-1 flex items-center gap-1">
-                  {analysis.steps.slice(0, 8).map((st) => {
-                    const barColor =
-                      st.conditionResult === true
-                        ? 'bg-emerald-600'
-                        : st.conditionResult === false
-                          ? 'bg-rose-500'
-                          : st.statementType === 'print'
-                            ? 'bg-amber-500'
-                            : 'bg-sky-500';
-                    return (
-                      <div
-                        key={st.stepIndex}
-                        title={`Line ${st.line}: ${st.description}`}
-                        className={`h-2 flex-1 rounded-full ${barColor} transition-colors`}
-                      />
-                    );
-                  })}
-                </div>
-                <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 tabular-nums shrink-0">
-                  {analysis.steps.length} steps
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="px-4 py-2.5 border-t border-emerald-100 dark:border-slate-800/80 bg-white dark:bg-[#0F1522] flex flex-col gap-1">
-            <div className="flex items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-1.5">
-                {analysis.isValidSyntax ? (
-                  <>
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
-                      Syntax Valid
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-                    <span className="text-rose-700 dark:text-rose-400 font-semibold">
-                      {analysis.syntaxIssues[0]?.title ?? 'Syntax Error Found'}
-                    </span>
-                  </>
-                )}
-              </div>
-
-              <span className="font-mono font-semibold text-emerald-700 dark:text-[#FFD43B] truncate max-w-[200px]">
-                {analysis.finalOutput.length > 0
-                  ? `Output: ${analysis.finalOutput.join(' | ')}`
-                  : 'No output'}
-              </span>
+              )}
             </div>
 
-            <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
-              Detected: {analysis.conceptCategories.length > 0 ? analysis.conceptCategories.join(' · ') : 'None'}
+            <div className="px-4 py-3 border-t border-emerald-100 dark:border-slate-800/80 bg-white dark:bg-[#0F1522] flex flex-col gap-1.5">
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-1.5">
+                  {analysis.isValidSyntax ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
+                        Syntax Valid
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                      <span className="text-rose-700 dark:text-rose-400 font-semibold">
+                        {analysis.syntaxIssues[0]?.title ?? 'Syntax Error Found'}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                <span className="font-mono font-semibold text-emerald-700 dark:text-[#FFD43B] truncate max-w-[220px]">
+                  {analysis.finalOutput.length > 0
+                    ? `Output: ${analysis.finalOutput.join(' | ')}`
+                    : 'No output'}
+                </span>
+              </div>
+
+              <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                Detected: {analysis.conceptCategories.length > 0 ? analysis.conceptCategories.join(' · ') : 'None'}
+              </div>
             </div>
           </div>
         </div>

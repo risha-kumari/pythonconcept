@@ -213,9 +213,10 @@ export function buildSearchCandidates(
       id: 'page-practice',
       kind: 'Page',
       routeLabel: 'Practice',
-      title: 'Practice Quiz (10 Questions)',
-      subtitle: 'Instant-feedback Python quiz with explanations and live leaderboard sync.',
-      keywords: 'practice quiz questions instant feedback score leaderboard',
+      title: `Practice Quiz (${PRACTICE_QUIZ.length} Questions & Sub-Topics)`,
+      subtitle: 'Practice Logic Gates, Boolean Expressions, Syntax Errors, and Core Python by sub-topic.',
+      keywords:
+        'practice quiz questions sub-topics logic gates boolean expressions syntax errors score leaderboard',
       action: () => onNavigate('practice'),
     },
     {
@@ -309,11 +310,11 @@ export function buildSearchCandidates(
     candidates.push({
       id: `practice-${q.id}`,
       category: 'quiz',
-      kind: 'Practice Q',
+      kind: `Practice · ${q.subTopic}`,
       routeLabel: 'Practice',
       title: `${q.topic}: ${q.question}`,
       subtitle: q.explanation,
-      searchText: `python practice quiz ${q.topic} ${q.question} ${q.codeSnippet ?? ''} ${q.explanation}`.toLowerCase(),
+      searchText: `python practice quiz ${q.topic} ${q.subTopic} ${q.question} ${q.codeSnippet ?? ''} ${q.explanation}`.toLowerCase(),
       action: () => onNavigate('practice'),
     });
   }
