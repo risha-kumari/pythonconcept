@@ -430,35 +430,57 @@ async function startServer() {
       : ROLE_INSTRUCTIONS[roleKey];
 
     let lastError: unknown = null;
-    for (let attempt = 0; attempt < 2; attempt++) {
+    const attemptModels: { model: string; search: boolean }[] = [
+      { model: modelName, search: useSearch },
+    ];
+    if (modelName !== 'gemini-3.1-flash-lite' || useSearch) {
+      attemptModels.push({ model: 'gemini-3.1-flash-lite', search: false });
+    }
+
+    for (const attemptCfg of attemptModels) {
       try {
         const chat = ai.chats.create({
-          model: modelName,
+          model: attemptCfg.model,
           history: formattedHistory,
           config: {
             systemInstruction,
-            ...(useSearch ? { tools: [{ googleSearch: {} }] } : {}),
-            ...(modelName === 'gemini-4-hydrogen'
+            ...(attemptCfg.search ? { tools: [{ googleSearch: {} }] } : {}),
+            ...(attemptCfg.model === 'gemini-4-hydrogen'
               ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } }
               : {}),
           },
         });
         const response = await chat.sendMessage({ message: userMessage });
         const reply = (response.text ?? '').trim();
-        const { sources } = useSearch ? extractGroundingMetadata(response) : { sources: [] };
+        const { sources } = attemptCfg.search ? extractGroundingMetadata(response) : { sources: [] };
         if (!reply) {
           res.status(502).json({ error: 'CodeBuddy returned an empty response. Please try again.' });
           return;
         }
-        res.json({ reply, model: modelName, role: roleKey, sources });
+        res.json({
+          reply,
+          model: attemptCfg.model,
+          role: roleKey,
+          sources,
+          searchFallbackNotice:
+            useSearch && !attemptCfg.search
+              ? 'Google Search is busy right now — answered using built-in Python knowledge.'
+              : undefined,
+        });
         return;
       } catch (err) {
         lastError = err;
         const msg = err instanceof Error ? err.message : String(err);
-        const isTransient =
-          msg.includes('503') || msg.includes('500') || msg.includes('ECONNRESET') || msg.includes('timeout');
-        if (attempt === 0 && isTransient) {
-          await new Promise((r) => setTimeout(r, 400));
+        const isRetryableSpike =
+          msg.includes('503') ||
+          msg.includes('UNAVAILABLE') ||
+          msg.includes('429') ||
+          msg.includes('RESOURCE_EXHAUSTED') ||
+          msg.includes('500') ||
+          msg.includes('ECONNRESET') ||
+          msg.includes('timeout');
+        if (isRetryableSpike) {
+          await new Promise((r) => setTimeout(r, 250));
           continue;
         }
         break;
@@ -549,62 +571,296 @@ async function startServer() {
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders?.();
 
     let closed = false;
-    req.on('close', () => {
-      closed = true;
+    res.on('close', () => {
+      if (!res.writableEnded) {
+        closed = true;
+      }
     });
 
+    const attemptConfigs: { model: string; search: boolean }[] = [
+      { model: modelName, search: useSearch },
+    ];
+    if (modelName !== 'gemini-3.1-flash-lite' || useSearch) {
+      attemptConfigs.push({ model: 'gemini-3.1-flash-lite', search: false });
+    }
+
+    let lastError: unknown = null;
+    let hasWrittenChunk = false;
+
+    for (let i = 0; i < attemptConfigs.length; i++) {
+      if (closed) return;
+      const attemptCfg = attemptConfigs[i];
+      try {
+        const chat = ai.chats.create({
+          model: attemptCfg.model,
+          history: formattedHistory,
+          config: {
+            systemInstruction,
+            ...(attemptCfg.search ? { tools: [{ googleSearch: {} }] } : {}),
+            ...(attemptCfg.model === 'gemini-4-hydrogen'
+              ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } }
+              : {}),
+          },
+        });
+
+        const collectedSources = new Map<string, GroundingSource>();
+        const stream = await chat.sendMessageStream({ message: userMessage });
+        for await (const chunk of stream) {
+          if (closed) break;
+          const text = chunk.text;
+          if (text) {
+            hasWrittenChunk = true;
+            res.write(`data: ${JSON.stringify({ chunk: text })}\n\n`);
+          }
+          if (attemptCfg.search) {
+            const { sources } = extractGroundingMetadata(chunk);
+            for (const src of sources) {
+              collectedSources.set(src.uri, src);
+            }
+          }
+        }
+
+        if (!closed) {
+          if (!hasWrittenChunk && i < attemptConfigs.length - 1) {
+            continue;
+          }
+          res.write(
+            `data: ${JSON.stringify({
+              done: true,
+              model: attemptCfg.model,
+              sources: Array.from(collectedSources.values()),
+              searchFallbackNotice:
+                useSearch && !attemptCfg.search
+                  ? 'Google Search is busy right now — answered using built-in Python knowledge.'
+                  : undefined,
+            })}\n\n`,
+          );
+          res.end();
+        }
+        return;
+      } catch (err) {
+        lastError = err;
+        const errMsg = err instanceof Error ? err.message : String(err);
+        const isRetryable =
+          !hasWrittenChunk &&
+          i < attemptConfigs.length - 1 &&
+          (errMsg.includes('503') ||
+            errMsg.includes('UNAVAILABLE') ||
+            errMsg.includes('429') ||
+            errMsg.includes('RESOURCE_EXHAUSTED') ||
+            errMsg.includes('500') ||
+            errMsg.includes('ECONNRESET') ||
+            errMsg.includes('timeout'));
+        if (isRetryable) {
+          await new Promise((r) => setTimeout(r, 250));
+          continue;
+        }
+        break;
+      }
+    }
+
+    if (closed) return;
+    const errMsg = lastError instanceof Error ? lastError.message : 'Unexpected Gemini API error.';
+    let friendly = `Could not reach CodeBuddy: ${errMsg}`;
+    if (
+      errMsg.includes('PERMISSION_DENIED') ||
+      errMsg.includes('API_KEY_INVALID') ||
+      errMsg.includes('403') ||
+      errMsg.includes('401')
+    ) {
+      friendly =
+        'Unable to authenticate with Gemini. Please check your API key in the Settings > Secrets panel.';
+    } else if (errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('429')) {
+      friendly = 'Rate limit reached right now. Please wait a moment and try again.';
+    }
+    res.write(`data: ${JSON.stringify({ error: friendly })}\n\n`);
+    res.end();
+  });
+
+  const ttsCache = new Map<string, string>();
+  let preferredTtsAttemptIndex: number | null = null;
+
+  app.post('/api/tts', async (req, res) => {
+    if (!process.env.GEMINI_API_KEY) {
+      res.status(500).json({
+        error:
+          'Gemini API key is not configured. Please check your key in the Settings > Secrets panel.',
+      });
+      return;
+    }
+
+    const body = req.body as { text?: unknown; voice?: unknown };
+    const cleanText =
+      typeof body?.text === 'string'
+        ? body.text.trim().replace(/\s+/g, ' ').slice(0, 650)
+        : '';
+    const requestedVoice =
+      body?.voice === 'Zephyr' || body?.voice === 'Puck' || body?.voice === 'Charon'
+        ? body.voice
+        : 'Charon';
+
+    if (!cleanText) {
+      res.status(400).json({ error: 'Please provide text to speak.' });
+      return;
+    }
+
+    const cacheKey = `${requestedVoice}:${cleanText}`;
+    const cached = ttsCache.get(cacheKey);
+    if (cached) {
+      res.json({ audioBase64: cached, mimeType: 'audio/wav', voiceName: requestedVoice, cached: true });
+      return;
+    }
+
     try {
-      const chat = ai.chats.create({
-        model: modelName,
-        history: formattedHistory,
-        config: {
-          systemInstruction,
-          ...(useSearch ? { tools: [{ googleSearch: {} }] } : {}),
-          ...(modelName === 'gemini-4-hydrogen'
-            ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } }
-            : {}),
+      const ttsBeta = new GoogleGenAI({
+        apiKey: process.env.GEMINI_API_KEY,
+        apiVersion: 'v1beta',
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          },
+        },
+      });
+      const ttsAlpha = new GoogleGenAI({
+        apiKey: process.env.GEMINI_API_KEY,
+        apiVersion: 'v1alpha',
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          },
         },
       });
 
-      const collectedSources = new Map<string, GroundingSource>();
-      const stream = await chat.sendMessageStream({ message: userMessage });
-      for await (const chunk of stream) {
-        if (closed) break;
-        const text = chunk.text;
-        if (text) {
-          res.write(`data: ${JSON.stringify({ chunk: text })}\n\n`);
-        }
-        if (useSearch) {
-          const { sources } = extractGroundingMetadata(chunk);
-          for (const src of sources) {
-            collectedSources.set(src.uri, src);
+      const voiceStyle =
+        'Warm, crystal-clear, natural English teacher speaking calmly and smoothly at a steady easy pace.';
+
+      const attempts: Array<{
+        label: string;
+        run: () => ReturnType<typeof ai.models.generateContent>;
+      }> = [
+        {
+          label: 'v1beta-voice',
+          run: () =>
+            ttsBeta.models.generateContent({
+              model: 'gemini-3.8-flash-lite-tts',
+              contents: [{ role: 'user', parts: [{ text: cleanText }] }],
+              config: {
+                responseModalities: ['AUDIO'],
+                speechConfig: {
+                  voiceConfig: {
+                    prebuiltVoiceConfig: { voiceName: requestedVoice },
+                  },
+                },
+              },
+            }),
+        },
+        {
+          label: 'v1alpha-metadata-voice',
+          run: () =>
+            ttsAlpha.models.generateContent({
+              model: 'gemini-3.8-flash-lite-tts',
+              contents: [
+                {
+                  role: 'user',
+                  parts: [
+                    {
+                      text: cleanText,
+                      speechMetadata: {
+                        style: voiceStyle,
+                      },
+                    },
+                  ],
+                },
+              ],
+              config: {
+                responseModalities: ['AUDIO'],
+                speechConfig: {
+                  voiceConfig: {
+                    prebuiltVoiceConfig: { voiceName: requestedVoice },
+                  },
+                },
+              },
+            }),
+        },
+        {
+          label: 'v1alpha-voice',
+          run: () =>
+            ttsAlpha.models.generateContent({
+              model: 'gemini-3.8-flash-lite-tts',
+              contents: [{ role: 'user', parts: [{ text: cleanText }] }],
+              config: {
+                responseModalities: ['AUDIO'],
+                speechConfig: {
+                  voiceConfig: {
+                    prebuiltVoiceConfig: { voiceName: requestedVoice },
+                  },
+                },
+              },
+            }),
+        },
+      ];
+
+      const orderedIndices =
+        preferredTtsAttemptIndex !== null
+          ? [
+              preferredTtsAttemptIndex,
+              ...attempts.map((_, i) => i).filter((i) => i !== preferredTtsAttemptIndex),
+            ]
+          : attempts.map((_, i) => i);
+
+      let base64Audio: string | undefined;
+      let usedLabel = '';
+      let lastErr: unknown = null;
+
+      for (const idx of orderedIndices) {
+        const attempt = attempts[idx];
+        try {
+          const response = await attempt.run();
+          base64Audio =
+            response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+          if (base64Audio) {
+            preferredTtsAttemptIndex = idx;
+            usedLabel = attempt.label;
+            break;
+          }
+        } catch (attemptErr) {
+          lastErr = attemptErr;
+          const msg = attemptErr instanceof Error ? attemptErr.message : '';
+          if (!msg.includes('INVALID_ARGUMENT') && !msg.includes('Unknown name')) {
+            throw attemptErr;
           }
         }
       }
-      if (!closed) {
-        res.write(
-          `data: ${JSON.stringify({
-            done: true,
-            model: modelName,
-            sources: Array.from(collectedSources.values()),
-          })}\n\n`,
-        );
-        res.end();
+
+      if (!base64Audio) {
+        if (lastErr) throw lastErr;
+        res.status(502).json({ error: 'Voice generator returned empty audio.' });
+        return;
       }
+
+      if (ttsCache.size >= 160) {
+        const oldestKey = ttsCache.keys().next().value;
+        if (oldestKey) ttsCache.delete(oldestKey);
+      }
+      ttsCache.set(cacheKey, base64Audio);
+
+      res.json({
+        audioBase64: base64Audio,
+        mimeType: 'audio/wav',
+        voiceName: requestedVoice,
+        engine: usedLabel,
+      });
     } catch (err) {
-      if (closed) return;
-      const errMsg = err instanceof Error ? err.message : 'Unexpected Gemini API error.';
-      let friendly = `Could not reach CodeBuddy: ${errMsg}`;
-      if (errMsg.includes('PERMISSION_DENIED') || errMsg.includes('API_KEY_INVALID') || errMsg.includes('403') || errMsg.includes('401')) {
-        friendly = 'Unable to authenticate with Gemini. Please check your API key in the Settings > Secrets panel.';
-      } else if (errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('429')) {
-        friendly = 'Rate limit reached right now. Please wait a moment and try again.';
+      const errMsg = err instanceof Error ? err.message : 'TTS generation failed.';
+      if (errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('429')) {
+        res.status(429).json({ error: 'Voice rate limit reached.' });
+        return;
       }
-      res.write(`data: ${JSON.stringify({ error: friendly })}\n\n`);
-      res.end();
+      res.status(502).json({ error: `Voice error: ${errMsg}` });
     }
   });
 

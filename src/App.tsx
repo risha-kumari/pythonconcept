@@ -16,6 +16,7 @@ import {
   Palette,
   MousePointerClick,
   MessageSquare,
+  Gamepad2,
   type LucideIcon,
 } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -34,6 +35,7 @@ import { SyntaxCheckerView } from './components/SyntaxCheckerView';
 import { LearningView } from './components/LearningView';
 import { PracticeView } from './components/PracticeView';
 import { TestView } from './components/TestView';
+import { LearnByPlayGame } from './components/LearnByPlayGame';
 import { CollabDrawer } from './components/CollabDrawer';
 import { BackToTopButton } from './components/BackToTopButton';
 import { InteractiveBackground, type BgPalette } from './components/InteractiveBackground';
@@ -112,6 +114,14 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     iconColor: 'text-violet-600 dark:text-violet-400',
     activeClass:
       'bg-violet-50/95 dark:bg-violet-500/15 text-violet-900 dark:text-white border-violet-200 dark:border-violet-500/40',
+  },
+  {
+    id: 'game',
+    label: 'Play Game',
+    icon: Gamepad2,
+    iconColor: 'text-fuchsia-600 dark:text-fuchsia-400',
+    activeClass:
+      'bg-fuchsia-50/95 dark:bg-fuchsia-500/15 text-fuchsia-900 dark:text-white border-fuchsia-200 dark:border-fuchsia-500/40',
   },
 ];
 
@@ -959,6 +969,24 @@ export default function App() {
                   collab.submitScore({ quizScore: score, quizTotal: total })
                 }
                 onOpenLeaderboard={() => setDrawerOpen(true)}
+              />
+            )}
+
+            {route === 'game' && (
+              <LearnByPlayGame
+                playerName={collab.displayName}
+                onSubmitScore={(score, total) =>
+                  collab.submitScore({ quizScore: score, quizTotal: total })
+                }
+              />
+            )}
+
+            {route === 'game' && (
+              <LearnByPlayGame
+                playerName={collab.displayName}
+                onSubmitScore={(score, total) =>
+                  collab.submitScore({ quizScore: score, quizTotal: total })
+                }
               />
             )}
           </main>

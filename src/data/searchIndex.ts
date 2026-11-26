@@ -14,7 +14,8 @@ export type AppRoute =
   | 'syntax'
   | 'learning'
   | 'practice'
-  | 'test';
+  | 'test'
+  | 'game';
 
 export type DetectorTab = 'explanation' | 'flow' | 'graphs' | 'boolean';
 
@@ -43,13 +44,13 @@ export interface SearchResultItem {
 }
 
 export const SUGGESTED_SEARCHES = [
+  'Animated Video Topics',
   'Logic Detector',
   'Boolean Gates',
   'NAND NOR XNOR',
   'Syntax Checker',
   'Sandbox',
   'For Loop',
-  'Assessment Test',
   'CodeBuddy',
 ];
 
@@ -210,6 +211,17 @@ export function buildSearchCandidates(
       action: () => onNavigate('learning'),
     },
     {
+      id: 'feature-video-lesson',
+      kind: 'Videos · 1–2 Min Each',
+      routeLabel: 'Learning · Animated Videos',
+      title: '8 Animated Python Topic Videos (1–2 Min Each, English Voice & Subtitles)',
+      subtitle:
+        'Full beginner-to-builder animated videos covering Syntax, Variables, Operators, If-Elif-Else, Logic Gates, Loops, Lists & Dictionaries, and Functions.',
+      keywords:
+        'video lesson 1 min 2 min animated english voice subtitles audio cc beginners python tutorial watch topics',
+      action: () => onOpenLesson('video'),
+    },
+    {
       id: 'page-practice',
       kind: 'Page',
       routeLabel: 'Practice',
@@ -228,6 +240,15 @@ export function buildSearchCandidates(
       keywords:
         'test exam assessment easy medium hard question palette scoreboard excellent very good good better luck next time',
       action: () => onNavigate('test'),
+    },
+    {
+      id: 'page-game',
+      kind: 'Arcade Game',
+      routeLabel: 'Learn By Play',
+      title: 'Python Code Quest Interactive Game',
+      subtitle: 'Play interactive coding challenges with gorgeous arcade colors, streaks, scores, and sound effects.',
+      keywords: 'game learn by play arcade quest code interactive challenges score streak audio',
+      action: () => onNavigate('game'),
     },
     {
       id: 'feature-codebuddy',

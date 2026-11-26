@@ -28,6 +28,7 @@ interface ChatMessage {
   text: string;
   streaming?: boolean;
   sources?: GroundingSource[];
+  note?: string;
 }
 
 function isSafeWebUrl(uri: string): boolean {
@@ -180,7 +181,7 @@ export function CodeBuddyChat({
 }: CodeBuddyChatProps) {
   const [role, setRole] = useState<ChatbotRole>('tutor');
   const [fastMode, setFastMode] = useState(false);
-  const [useSearch, setUseSearch] = useState(true);
+  const [useSearch, setUseSearch] = useState(false);
   const [includeCode, setIncludeCode] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -278,17 +279,11 @@ export function CodeBuddyChat({
       let buffer = '';
       let accumulated = '';
       let finalSources: GroundingSource[] = [];
+      let fallbackNotice: string | undefined;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const events = buffer.split('\n\n');
-        buffer = events.pop() ?? '';
-
-        for (const evt of events) {
-          const line = evt.trim();
+      const processEventBlock = (evt: string) => {
+        for (const rawLine of evt.split('\n')) {
+          const line = rawLine.trim();
           if (!line.startsWith('data:')) continue;
           const jsonStr = line.slice(5).trim();
           if (!jsonStr) continue;
@@ -298,6 +293,7 @@ export function CodeBuddyChat({
             done?: boolean;
             error?: string;
             sources?: GroundingSource[];
+            searchFallbackNotice?: string;
           };
 
           if (parsed.error) {
@@ -312,14 +308,48 @@ export function CodeBuddyChat({
           if (Array.isArray(parsed.sources) && parsed.sources.length > 0) {
             finalSources = parsed.sources.filter((s) => isSafeWebUrl(s.uri));
           }
+          if (typeof parsed.searchFallbackNotice === 'string' && parsed.searchFallbackNotice) {
+            fallbackNotice = parsed.searchFallbackNotice;
+          }
         }
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (value) {
+          buffer += decoder.decode(value, { stream: !done }).replace(/\r\n/g, '\n');
+        } else if (done) {
+          buffer += decoder.decode();
+        }
+
+        const events = buffer.split('\n\n');
+        buffer = events.pop() ?? '';
+        for (const evt of events) {
+          if (evt.trim()) processEventBlock(evt);
+        }
+
+        if (done) {
+          if (buffer.trim()) {
+            processEventBlock(buffer);
+          }
+          break;
+        }
+      }
+
+      if (!accumulated.trim()) {
+        throw new Error('CodeBuddy did not receive a reply. Please try sending again.');
       }
 
       setMessages((prev) =>
         prev
           .map((m) =>
             m.id === modelId
-              ? { ...m, streaming: false, sources: finalSources.length > 0 ? finalSources : undefined }
+              ? {
+                  ...m,
+                  streaming: false,
+                  sources: finalSources.length > 0 ? finalSources : undefined,
+                  note: fallbackNotice,
+                }
               : m,
           )
           .filter((m) => m.id !== modelId || m.text.trim().length > 0),
@@ -520,6 +550,11 @@ export function CodeBuddyChat({
                   ) : msg.text ? (
                     <>
                       {renderFormattedMessage(msg.text, onApplyCode)}
+                      {msg.note && (
+                        <p className="mt-2 text-[11px] text-amber-700 dark:text-amber-300">
+                          {msg.note}
+                        </p>
+                      )}
                       {msg.sources && msg.sources.length > 0 && (
                         <div className="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-700/70">
                           <div className="text-[10px] font-semibold text-sky-700 dark:text-sky-400 mb-1 flex items-center gap-1">
