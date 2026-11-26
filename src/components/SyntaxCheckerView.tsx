@@ -1,0 +1,215 @@
+import { CheckCircle2, AlertTriangle, Wrench, ArrowRight } from 'lucide-react';
+import { SYNTAX_ERROR_PRESETS } from '../data/curriculum';
+import type { PythonAnalysisResult, SyntaxIssue } from '../engine/pythonAnalyzer';
+
+interface SyntaxCheckerViewProps {
+  code: string;
+  onChangeCode: (nextCode: string) => void;
+  analysis: PythonAnalysisResult;
+  onApplyFix: (issue: SyntaxIssue) => void;
+  onOpenInDetector: () => void;
+}
+
+export function SyntaxCheckerView({
+  code,
+  onChangeCode,
+  analysis,
+  onApplyFix,
+  onOpenInDetector,
+}: SyntaxCheckerViewProps) {
+  const lines = code.split('\n');
+  const errorLines = new Set(analysis.syntaxIssues.map((i) => i.line));
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+      {/* Header */}
+      <div className="flex flex-wrap items-end justify-between gap-4 pb-5 border-b border-slate-200 dark:border-slate-800/80">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
+            Python Syntax Checker
+          </h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
+            Test broken Python code or try common beginner mistakes to see the exact line, plain-English reason, and a one-click fix.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          {analysis.isValidSyntax ? (
+            <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-emerald-300 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 text-sm font-semibold whitespace-nowrap">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              Syntax Status: Valid
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-rose-300 dark:border-rose-500/40 bg-rose-50 dark:bg-rose-500/10 text-rose-800 dark:text-rose-300 text-sm font-semibold whitespace-nowrap">
+              <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+              Syntax Status: Error Found
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Main Two-Column Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mt-5 items-start">
+        {/* Left: Sticky Code Input & Error Presets */}
+        <div className="lg:col-span-6 lg:sticky lg:top-20 flex flex-col gap-3">
+          <div className="rounded-xl border border-amber-200/90 dark:border-slate-800/80 bg-white/95 dark:bg-[#111827]/95 overflow-hidden shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 border-b border-amber-100 dark:border-slate-800/80 bg-gradient-to-r from-amber-50/90 via-rose-50/60 to-emerald-50/70 dark:from-[#0F1522] dark:to-[#131B2E]">
+              <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                Test Code Input
+              </span>
+              <span className="text-xs text-slate-600 dark:text-slate-400">
+                Try a common mistake below
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 px-4 py-2 border-b border-emerald-100 dark:border-slate-800/60 bg-[#F8FAFC] dark:bg-[#0D131F]">
+              {SYNTAX_ERROR_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => onChangeCode(preset.code)}
+                  className="px-2.5 py-1 text-xs font-medium rounded-md text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white bg-white dark:bg-slate-800/50 hover:bg-emerald-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/60 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex min-h-[240px] bg-[#F8FAFC] dark:bg-[#0B0F17] font-mono text-[13.5px] leading-6">
+              <div
+                aria-hidden="true"
+                className="w-10 shrink-0 py-3 text-right pr-2.5 select-none bg-[#F0FDF4] dark:bg-[#0B0F17] border-r border-emerald-100 dark:border-slate-800/60 tabular-nums"
+              >
+                {lines.map((_, idx) => {
+                  const lineNum = idx + 1;
+                  const hasErr = errorLines.has(lineNum);
+                  return (
+                    <div
+                      key={lineNum}
+                      className={`h-6 ${
+                        hasErr
+                          ? 'text-rose-600 dark:text-rose-400 font-semibold'
+                          : 'text-slate-400 dark:text-slate-600'
+                      }`}
+                    >
+                      {lineNum}
+                    </div>
+                  );
+                })}
+              </div>
+              <textarea
+                value={code}
+                onChange={(e) => onChangeCode(e.target.value)}
+                spellCheck={false}
+                aria-label="Syntax checker Python editor"
+                className="flex-1 min-h-[240px] resize-y bg-transparent px-3.5 py-3 text-slate-900 dark:text-slate-100 focus:outline-none leading-6 font-mono caret-emerald-600 dark:caret-[#FFD43B]"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 px-1">
+            <span>Checks colons, indentation, brackets, quotes, keywords, and operators.</span>
+            <button
+              type="button"
+              onClick={onOpenInDetector}
+              className="inline-flex items-center gap-1 text-emerald-700 dark:text-[#7CC4FF] hover:underline font-semibold whitespace-nowrap cursor-pointer"
+            >
+              Simulate in Logic Detector
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Right: Diagnostics */}
+        <div className="lg:col-span-6 flex flex-col gap-3.5">
+          {analysis.isValidSyntax ? (
+            <div className="rounded-xl border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50/60 dark:bg-[#111827] p-5">
+              <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-semibold text-base">
+                <CheckCircle2 className="w-5 h-5" />
+                <span>No Syntax Mistakes Found</span>
+              </div>
+              <p className="text-sm text-slate-700 dark:text-slate-300 mt-1.5 leading-relaxed">
+                Your colons, indentation levels, quotes, brackets, and Python keywords are valid. You can now watch it run step by step in the Logic Detector.
+              </p>
+              <button
+                type="button"
+                onClick={onOpenInDetector}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-[#FFD43B] dark:text-[#0B0F17] dark:hover:bg-[#FFE066] transition-colors cursor-pointer"
+              >
+                Open in Logic Detector
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3.5">
+              {analysis.syntaxIssues.map((issue) => (
+                <div
+                  key={issue.id}
+                  className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111827] p-4 flex flex-col gap-3 shadow-xs"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="text-xs text-rose-600 dark:text-rose-400 font-semibold tabular-nums">
+                        Line {issue.line} · Column {issue.column}
+                      </div>
+                      <h3 className="text-base font-semibold text-slate-900 dark:text-white mt-0.5">
+                        {issue.title}
+                      </h3>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onApplyFix(issue)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                    >
+                      <Wrench className="w-3.5 h-3.5" />
+                      Apply Fix
+                    </button>
+                  </div>
+
+                  {/* Incorrect Line */}
+                  <div className="rounded-lg border border-rose-200 dark:border-rose-500/30 bg-rose-50/70 dark:bg-[#0B0F17] p-2.5">
+                    <div className="text-[11px] font-semibold text-rose-700 dark:text-rose-400 mb-0.5">
+                      Incorrect Code Line
+                    </div>
+                    <pre className="font-mono text-xs text-slate-900 dark:text-slate-200 overflow-x-auto">
+                      {issue.lineContent || '(empty line)'}
+                    </pre>
+                  </div>
+
+                  {/* Reason in simple English */}
+                  <div>
+                    <div className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      What went wrong
+                    </div>
+                    <p className="text-sm text-slate-800 dark:text-slate-200 mt-0.5">{issue.reason}</p>
+                  </div>
+
+                  {/* Corrected Code Example */}
+                  <div className="rounded-lg border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/70 dark:bg-[#0B0F17] p-2.5">
+                    <div className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 mb-0.5">
+                      How to Fix It
+                    </div>
+                    <pre className="font-mono text-xs text-emerald-900 dark:text-emerald-300 overflow-x-auto">
+                      {issue.correctedLine}
+                    </pre>
+                  </div>
+
+                  {/* Explanation */}
+                  <div className="pt-2 border-t border-slate-200 dark:border-slate-800/70">
+                    <div className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Why Python needs this
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
+                      {issue.explanation}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

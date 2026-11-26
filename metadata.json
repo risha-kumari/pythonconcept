@@ -1,0 +1,6 @@
+{
+  "name": "Python Logic & Syntax Detector",
+  "description": "An interactive beginner-friendly Python logic detector, syntax checker, animated condition flow visualizer, Boolean truth table lab, and collaborative learning sandbox.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
